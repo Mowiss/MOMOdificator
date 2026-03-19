@@ -49,6 +49,10 @@
         .rotate-180 { transform: rotate(180deg); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Styles spécifiques au textarea flottant */
+        #floatTextArea::placeholder { color: rgba(100, 100, 100, 0.5); }
+        .align-btn.active { @apply bg-amber-600 text-white; }
     </style>
 </head>
 <body class="text-zinc-300 min-h-screen p-4 md:p-8 flex flex-col items-center">
@@ -96,7 +100,7 @@
                         </button>
                     </div>
                     
-                    <!-- Ligne 2 : Outils -->
+                    <!-- Ligne 2 : Outils (épurée) -->
                     <div id="editorToolbar" class="flex flex-wrap items-center gap-3 opacity-50 pointer-events-none transition-opacity">
                         
                         <!-- Undo / Redo -->
@@ -113,9 +117,9 @@
 
                         <div class="h-6 w-px bg-zinc-700 mx-2"></div>
 
-                        <!-- Sélecteur de couleur -->
+                        <!-- Sélecteur de couleur global -->
                         <div class="relative">
-                            <button id="colorPickerBtn" onclick="toggleColorPopup()" class="btn-tool" title="Couleur du trait">⚫</button>
+                            <button id="colorPickerBtn" onclick="toggleColorPopup()" class="btn-tool" title="Couleur du trait et du texte">⚫</button>
                             <div id="colorPopup" class="absolute top-12 left-0 bg-zinc-800 border border-zinc-700 p-2 rounded-xl shadow-2xl flex gap-2 hidden z-50">
                                 <button onclick="setColor('#000000', '⚫')" class="hover:scale-110 transition-transform">⚫</button>
                                 <button onclick="setColor('#ef4444', '🔴')" class="hover:scale-110 transition-transform">🔴</button>
@@ -129,14 +133,8 @@
 
                         <div class="h-6 w-px bg-zinc-700 mx-2"></div>
 
-                        <button id="tool-text" onclick="selectTool('text')" class="btn-tool font-sans font-bold text-sm" title="Ajouter du texte">T</button>
-                        
-                        <div id="textControls" class="flex items-center gap-2 hidden">
-                            <span class="text-[10px] text-zinc-500 font-bold uppercase">Taille:</span>
-                            <input type="number" id="editorTextSize" value="20" min="8" max="150" class="bg-zinc-950 border border-zinc-800 text-xs text-white px-2 py-1.5 rounded outline-none focus:border-amber-500 w-16 text-center">
-                        </div>
-                        
-                        <input type="text" id="editorTextInput" placeholder="Texte à insérer..." class="bg-zinc-950 border border-zinc-800 text-xs text-white px-3 py-2 rounded-lg outline-none focus:border-amber-500 w-48" onfocus="selectTool('text')">
+                        <!-- Outil Texte (Simplifié) -->
+                        <button id="tool-text" onclick="selectTool('text')" class="btn-tool font-sans font-bold text-sm" title="Ajouter du texte (Cliquez sur le PDF)">T</button>
 
                         <div class="h-6 w-px bg-zinc-700 mx-2"></div>
 
@@ -158,12 +156,39 @@
                     <div id="zoomWrapper" class="relative shadow-2xl origin-top-left transition-transform duration-75">
                         <canvas id="pdfBgCanvas" class="absolute top-0 left-0"></canvas>
                         <canvas id="pdfDrawCanvas" class="absolute top-0 left-0 cursor-crosshair z-10"></canvas>
+                        
+                        <!-- MODULE TEXTE FLOTTANT (Overlay) -->
+                        <div id="floatingTextWrapper" class="absolute hidden z-50" style="left: 50px; top: 50px;">
+                            
+                            <!-- Toolbar contextuelle du texte -->
+                            <div class="absolute -top-12 left-0 bg-zinc-800 border border-zinc-700 rounded-lg p-1.5 flex gap-2 shadow-2xl flex-nowrap items-center text-zinc-300 pointer-events-auto">
+                                <div id="dragTextHandle" class="cursor-move px-2 hover:text-white" title="Déplacer">✥</div>
+                                <div class="w-px h-5 bg-zinc-600"></div>
+                                
+                                <input type="number" id="floatTextSize" value="20" min="8" max="150" title="Taille de police" class="bg-zinc-950 text-white font-mono text-xs w-12 rounded py-1 px-1 outline-none text-center" onchange="updateFloatText()">
+                                
+                                <div class="w-px h-5 bg-zinc-600"></div>
+                                
+                                <button onclick="setFloatAlign('left')" id="btn-align-left" class="align-btn active px-2 py-1 hover:bg-zinc-700 rounded text-xs" title="Aligner à gauche">⫷</button>
+                                <button onclick="setFloatAlign('center')" id="btn-align-center" class="align-btn px-2 py-1 hover:bg-zinc-700 rounded text-xs" title="Centrer">≡</button>
+                                <button onclick="setFloatAlign('right')" id="btn-align-right" class="align-btn px-2 py-1 hover:bg-zinc-700 rounded text-xs" title="Aligner à droite">⫸</button>
+                                
+                                <div class="w-px h-5 bg-zinc-600"></div>
+                                
+                                <button onclick="bakeTextToCanvas()" class="text-emerald-500 hover:text-emerald-400 hover:bg-zinc-700 px-3 py-1 rounded font-bold text-xs" title="Valider et Imprimer">✓</button>
+                                <button onclick="cancelTextOverlay()" class="text-red-500 hover:text-red-400 hover:bg-zinc-700 px-3 py-1 rounded font-bold text-xs" title="Annuler">✗</button>
+                            </div>
+                            
+                            <!-- Zone de saisie redimensionnable -->
+                            <textarea id="floatTextArea" placeholder="Votre texte ici..." class="bg-amber-500/10 border-2 border-amber-500/50 text-black outline-none p-2 pointer-events-auto" style="min-width: 200px; min-height: 80px; resize: both; font-family: 'Comfortaa', cursive; line-height: 1.2;" oninput="updateFloatText()"></textarea>
+                        </div>
+
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- SECTION 2 : CONTRÔLE DE VERSIONS (NOUVEAU) -->
+        <!-- SECTION 2 : CONTRÔLE DE VERSIONS -->
         <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
             <button onclick="toggleSection('sec-compare', 'icon-compare')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
                 <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
@@ -174,11 +199,7 @@
             </button>
             
             <div id="sec-compare" class="p-6 flex flex-col gap-4 hidden">
-                
-                <!-- Panneau de contrôle Comparaison -->
                 <div class="flex flex-col md:flex-row gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-                    
-                    <!-- Fichier 1 (Fond) -->
                     <div class="flex-1 flex flex-col gap-2">
                         <div class="flex items-center justify-between">
                             <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Document Original (Fond)</span>
@@ -186,10 +207,7 @@
                         </div>
                         <input type="file" id="comparePdf1" accept=".pdf" class="block w-full text-xs text-zinc-500 outline-none" onchange="loadComparePdf(1)">
                     </div>
-
                     <div class="hidden md:block w-px bg-zinc-800"></div>
-
-                    <!-- Fichier 2 (Superposé) -->
                     <div class="flex-1 flex flex-col gap-2">
                         <div class="flex items-center justify-between">
                             <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Document Révisé (Dessus)</span>
@@ -197,11 +215,7 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
                             <input type="file" id="comparePdf2" accept=".pdf" class="block w-full text-xs text-zinc-500 outline-none flex-1 min-w-[150px]" onchange="loadComparePdf(2)">
-                            
-                            <!-- Bouton d'alignement manuel -->
                             <button id="btn-align-mode" onclick="toggleCompareAlign()" class="px-2 py-1 rounded bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700 transition-colors text-xs font-bold" title="Aligner manuellement le calque">🎯 Aligner</button>
-                            
-                            <!-- Curseur Opacité -->
                             <div class="flex items-center gap-1 bg-zinc-950 px-2 py-1 rounded border border-zinc-800" title="Opacité du document révisé">
                                 <span class="text-[10px] text-zinc-500">Brouillard:</span>
                                 <input type="range" id="compareOpacity" min="0" max="1" step="0.1" value="0.5" class="w-16 accent-amber-500" oninput="updateCompareOpacity()">
@@ -209,19 +223,13 @@
                         </div>
                     </div>
                 </div>
-                
                 <p id="compareStatus" class="text-[10px] text-center text-zinc-500 uppercase tracking-widest font-bold h-4">Chargez deux PDF pour les comparer</p>
-
-                <!-- Zone de rendu Comparaison -->
-                <!-- Fond quadrillé pour bien voir les transparences -->
                 <div id="compareContainer" class="relative overflow-hidden border border-zinc-800 rounded-lg h-[600px] flex justify-center p-4 select-none" style="background-image: linear-gradient(45deg, #18181b 25%, transparent 25%), linear-gradient(-45deg, #18181b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #18181b 75%), linear-gradient(-45deg, transparent 75%, #18181b 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; background-color: #09090b;">
                     <div id="compareZoomWrapper" class="relative shadow-2xl origin-top-left transition-transform duration-75">
                         <canvas id="compareCanvas1" class="absolute top-0 left-0 transition-opacity duration-200"></canvas>
-                        <!-- Le Canvas 2 est superposé, avec opacité modifiable -->
                         <canvas id="compareCanvas2" class="absolute top-0 left-0 transition-opacity duration-200 mix-blend-normal" style="opacity: 0.5;"></canvas>
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -288,24 +296,20 @@
     </div>
 
     <script>
-        // --- LOGIQUE UI (Accordéons) ---
+        // --- LOGIQUE UI ---
         function toggleSection(sectionId, iconId) {
             const section = document.getElementById(sectionId);
             const icon = document.getElementById(iconId);
             if (section.classList.contains('hidden')) {
                 section.classList.remove('hidden');
                 icon.classList.add('rotate-180');
-                
-                // Si on ouvre la section Contrôle, initialiser ses événements de navigation
                 if (sectionId === 'sec-compare') initComparePanZoomEvents();
-                
             } else {
                 section.classList.add('hidden');
                 icon.classList.remove('rotate-180');
             }
         }
 
-        // --- UTILITAIRES COMMUNS ---
         function downloadFile(blob, filename) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -321,11 +325,16 @@
             else el.className = "text-[10px] mt-3 text-center text-amber-500 uppercase tracking-widest font-bold h-4";
         }
 
-        // --- 1. ÉDITEUR PDF ---
+        // --- 1. ÉDITEUR PDF & MODULE TEXTE FLOTTANT ---
         let currentEditorTool = 'brush'; let currentDrawColor = '#000000'; let isDrawing = false; let lastX = 0, lastY = 0; let drawingSnapshot = null;
         let editorOriginalFileName = "document"; let pdfWidth = 0, pdfHeight = 0;
         let currentZoom = 1; let isPanning = false; let panStartX = 0, panStartY = 0; let translateX = 0, translateY = 0;
         let stampImageObj = null; let undoStack = []; let redoStack = []; const MAX_HISTORY = 30;
+
+        // Variables Texte Flottant
+        let floatTextAlign = 'left';
+        let isDraggingFloatText = false;
+        let dragTxtStartX = 0, dragTxtStartY = 0;
 
         function updateUndoRedoUI() {
             const btnUndo = document.getElementById('btn-undo'); const btnRedo = document.getElementById('btn-redo');
@@ -366,25 +375,158 @@
         function setColor(hexCode, emoji) {
             currentDrawColor = hexCode; document.getElementById('colorPickerBtn').innerText = emoji;
             document.getElementById('colorPopup').classList.add('hidden');
-            if(currentEditorTool === 'eraser' || currentEditorTool === 'stamp') selectTool('brush');
+            
+            // Appliquer la couleur immédiatement si le module texte est ouvert
+            if(!document.getElementById('floatingTextWrapper').classList.contains('hidden')) {
+                document.getElementById('floatTextArea').style.color = currentDrawColor;
+            } else if(currentEditorTool === 'eraser' || currentEditorTool === 'stamp') {
+                selectTool('brush');
+            }
         }
 
         function selectTool(toolName) {
+            // Si on change d'outil alors que le texte flottant est ouvert, on l'annule par sécurité
+            cancelTextOverlay();
+            
             currentEditorTool = toolName;
             document.querySelectorAll('#editorToolbar .btn-tool').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tool-' + toolName).classList.add('active');
             
             const drawCanvas = document.getElementById('pdfDrawCanvas');
             const stampControls = document.getElementById('stampControls');
-            const textControls = document.getElementById('textControls');
             
             if(toolName === 'stamp') { stampControls.classList.remove('hidden'); if(!stampImageObj) document.getElementById('stampInput').click(); } 
             else stampControls.classList.add('hidden');
 
-            if(toolName === 'text') textControls.classList.remove('hidden'); else textControls.classList.add('hidden');
-            
             if(toolName === 'text') drawCanvas.style.cursor = 'text'; else if (toolName === 'stamp') drawCanvas.style.cursor = 'cell'; else drawCanvas.style.cursor = 'crosshair';
         }
+
+        // --- GESTION DU TEXTE FLOTTANT ---
+
+        function openTextOverlay(x, y) {
+            const wrapper = document.getElementById('floatingTextWrapper');
+            const textarea = document.getElementById('floatTextArea');
+            
+            wrapper.style.left = x + 'px';
+            wrapper.style.top = y + 'px';
+            wrapper.classList.remove('hidden');
+            
+            textarea.value = '';
+            updateFloatText();
+            textarea.focus();
+            setStatus('editorStatus', "Tapez votre texte, ajustez le cadre, et cliquez sur ✓ pour valider.", 'pending');
+        }
+
+        function cancelTextOverlay() {
+            document.getElementById('floatingTextWrapper').classList.add('hidden');
+            if (currentEditorTool === 'text') setStatus('editorStatus', "Mode Texte : Cliquez sur le PDF pour insérer une zone.", 'success');
+        }
+
+        function setFloatAlign(align) {
+            floatTextAlign = align;
+            document.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-align-' + align).classList.add('active');
+            document.getElementById('floatTextArea').style.textAlign = align;
+        }
+
+        function updateFloatText() {
+            const textarea = document.getElementById('floatTextArea');
+            const size = document.getElementById('floatTextSize').value || 20;
+            textarea.style.fontSize = size + 'px';
+            textarea.style.color = currentDrawColor;
+        }
+
+        function bakeTextToCanvas() {
+            const wrapper = document.getElementById('floatingTextWrapper');
+            const textarea = document.getElementById('floatTextArea');
+            const text = textarea.value;
+            
+            if (!text.trim()) { cancelTextOverlay(); return; }
+
+            saveState();
+
+            const canvas = document.getElementById('pdfDrawCanvas');
+            const ctx = canvas.getContext('2d');
+            const fontSize = parseInt(document.getElementById('floatTextSize').value) || 20;
+            
+            // Récupérer la position relative au canevas
+            const boxX = parseFloat(wrapper.style.left);
+            const boxY = parseFloat(wrapper.style.top);
+            
+            // Déduction exacte du padding CSS (p-2 = 8px) pour que le mot passe à la ligne au même endroit
+            const padding = 8; 
+            const boxWidth = textarea.clientWidth - (padding * 2); 
+            
+            ctx.globalCompositeOperation = "source-over";
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = currentDrawColor;
+            
+            // On utilise exactement la même police et graisse que le textarea
+            ctx.font = `${fontSize}px 'Comfortaa', cursive`;
+            ctx.textBaseline = "top";
+
+            // Logique de Wrapping (Retour à la ligne automatique synchronisé)
+            const lines = text.split('\n');
+            let currentY = boxY + padding;
+            const lineHeight = fontSize * 1.2; // Synchronisé avec le line-height CSS
+            
+            for (let i = 0; i < lines.length; i++) {
+                const words = lines[i].split(' ');
+                let line = '';
+                
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > boxWidth && n > 0) {
+                        drawTextLine(ctx, line, boxX, currentY, boxWidth, padding);
+                        line = words[n] + ' ';
+                        currentY += lineHeight;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                drawTextLine(ctx, line, boxX, currentY, boxWidth, padding);
+                currentY += lineHeight;
+            }
+
+            cancelTextOverlay();
+            setStatus('editorStatus', "Texte imprimé avec succès ✓", 'success');
+        }
+
+        function drawTextLine(ctx, text, x, y, boxWidth, padding) {
+            let drawX = x + padding;
+            if (floatTextAlign === 'center') {
+                drawX = x + padding + (boxWidth / 2);
+                ctx.textAlign = 'center';
+            } else if (floatTextAlign === 'right') {
+                drawX = x + padding + boxWidth;
+                ctx.textAlign = 'right';
+            } else {
+                ctx.textAlign = 'left';
+            }
+            // trimEnd() évite que des espaces invisibles en fin de ligne ne faussent l'alignement à droite ou centré
+            ctx.fillText(text.trimEnd(), drawX, y); 
+        }
+
+        // Glisser-déposer du module texte
+        document.getElementById('dragTextHandle').onmousedown = (e) => {
+            if (e.button !== 0) return;
+            isDraggingFloatText = true;
+            const wrapper = document.getElementById('floatingTextWrapper');
+            // Calculer le décalage initial
+            dragTxtStartX = e.clientX - (parseFloat(wrapper.style.left) * currentZoom);
+            dragTxtStartY = e.clientY - (parseFloat(wrapper.style.top) * currentZoom);
+            e.stopPropagation(); // Évite que le canvas prenne le focus
+        };
+        window.addEventListener('mousemove', (e) => {
+            if (isDraggingFloatText) {
+                const wrapper = document.getElementById('floatingTextWrapper');
+                wrapper.style.left = ((e.clientX - dragTxtStartX) / currentZoom) + 'px';
+                wrapper.style.top = ((e.clientY - dragTxtStartY) / currentZoom) + 'px';
+            }
+        });
+        window.addEventListener('mouseup', () => { isDraggingFloatText = false; });
+
 
         function loadStampImage(event) {
             const file = event.target.files[0]; if(!file) return;
@@ -421,6 +563,7 @@
                     drawCanvas.getContext('2d').clearRect(0, 0, drawCanvas.width, drawCanvas.height);
                     
                     undoStack = []; redoStack = []; updateUndoRedoUI();
+                    cancelTextOverlay();
 
                     document.getElementById('editorToolbar').classList.remove('opacity-50', 'pointer-events-none');
                     document.getElementById('btn-export-pdf').classList.remove('opacity-50', 'pointer-events-none');
@@ -440,15 +583,20 @@
 
             canvas.onmousedown = (e) => {
                 if(e.button !== 0) return; 
-                saveState(); const pos = getPos(e);
                 
+                const pos = getPos(e);
+                
+                // Outil TEXTE (Ouverture de l'Overlay)
                 if (currentEditorTool === 'text') {
-                    const text = document.getElementById('editorTextInput').value; const textSize = document.getElementById('editorTextSize').value || 20;
-                    if(text.trim() === '') { undoStack.pop(); updateUndoRedoUI(); return setStatus('editorStatus', "Veuillez taper du texte d'abord", 'error'); }
-                    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1.0; ctx.font = `bold ${textSize}px sans-serif`; ctx.fillStyle = currentDrawColor;
-                    ctx.fillText(text, pos.x, pos.y); setStatus('editorStatus', "Texte ajouté ✓", 'success'); return;
+                    // Si on clique alors qu'un texte est déjà ouvert, on ne fait rien (on laisse l'utilisateur valider l'ancien)
+                    if (!document.getElementById('floatingTextWrapper').classList.contains('hidden')) return;
+                    openTextOverlay(pos.x, pos.y);
+                    return;
                 }
                 
+                saveState(); 
+
+                // Outil TAMPON
                 if (currentEditorTool === 'stamp') {
                     if(!stampImageObj) { undoStack.pop(); updateUndoRedoUI(); return setStatus('editorStatus', "Aucune image sélectionnée", 'error'); }
                     const scale = parseFloat(document.getElementById('stampScale').value);
@@ -507,6 +655,12 @@
 
         async function exportEditedPdf() {
             if(pdfWidth === 0) return setStatus('editorStatus', "Aucun PDF chargé", 'error');
+            
+            // Si une boîte de texte est restée ouverte sans être validée, on la valide de force avant l'export
+            if(!document.getElementById('floatingTextWrapper').classList.contains('hidden')) {
+                bakeTextToCanvas();
+            }
+
             setStatus('editorStatus', "Fusion et exportation...", 'pending');
             const mCtx = document.createElement('canvas').getContext('2d');
             mCtx.canvas.width = pdfWidth; mCtx.canvas.height = pdfHeight;
@@ -517,42 +671,29 @@
             setStatus('editorStatus', "PDF exporté ✓", 'success');
         }
 
-        // --- 2. CONTRÔLE DE VERSIONS (NOUVEAU) ---
+        // --- 2. CONTRÔLE DE VERSIONS ---
         let compZoom = 1; let compTx = 0; let compTy = 0; let compIsPanning = false; let compPanSx = 0; let compPanSy = 0;
         let compLayer1Visible = true; let compLayer2Visible = true;
-        
-        // Variables pour l'alignement manuel
         let compAlignMode = false; let compL2Tx = 0; let compL2Ty = 0; let isAligning = false; let alignStartX = 0; let alignStartY = 0;
 
         async function loadComparePdf(layerNum) {
             const fileInput = document.getElementById('comparePdf' + layerNum);
             if (!fileInput.files.length) return;
-            
             setStatus('compareStatus', `Chargement du calque ${layerNum}...`, 'pending');
-            const file = fileInput.files[0];
-            const reader = new FileReader();
+            const file = fileInput.files[0]; const reader = new FileReader();
 
             reader.onload = async function(e) {
                 try {
-                    const typedarray = new Uint8Array(e.target.result);
-                    const pdf = await pdfjsLib.getDocument({data: typedarray}).promise;
-                    const page = await pdf.getPage(1);
-                    const viewport = page.getViewport({scale: 1.5}); 
-
+                    const typedarray = new Uint8Array(e.target.result); const pdf = await pdfjsLib.getDocument({data: typedarray}).promise;
+                    const page = await pdf.getPage(1); const viewport = page.getViewport({scale: 1.5}); 
                     const canvas = document.getElementById('compareCanvas' + layerNum);
                     canvas.width = viewport.width; canvas.height = viewport.height;
                     
-                    // On base la taille du wrapper sur le Layer 1
                     if(layerNum === 1) {
-                        canvas.parentElement.style.width = viewport.width + 'px';
-                        canvas.parentElement.style.height = viewport.height + 'px';
-                        // Réinitialiser la vue
-                        compZoom = 1; compTx = 0; compTy = 0;
-                        document.getElementById('compareZoomWrapper').style.transform = `translate(${compTx}px, ${compTy}px) scale(${compZoom})`;
+                        canvas.parentElement.style.width = viewport.width + 'px'; canvas.parentElement.style.height = viewport.height + 'px';
+                        compZoom = 1; compTx = 0; compTy = 0; document.getElementById('compareZoomWrapper').style.transform = `translate(${compTx}px, ${compTy}px) scale(${compZoom})`;
                     } else if (layerNum === 2) {
-                        // Réinitialiser la position du calque 2 s'il est rechargé
-                        compL2Tx = 0; compL2Ty = 0;
-                        document.getElementById('compareCanvas2').style.transform = `translate(${compL2Tx}px, ${compL2Ty}px)`;
+                        compL2Tx = 0; compL2Ty = 0; document.getElementById('compareCanvas2').style.transform = `translate(${compL2Tx}px, ${compL2Ty}px)`;
                     }
 
                     await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
@@ -567,33 +708,18 @@
         }
 
         function toggleCompareLayer(layerNum) {
-            const canvas = document.getElementById('compareCanvas' + layerNum);
-            const btn = document.getElementById('btn-eye-' + layerNum);
-            
-            if (layerNum === 1) {
-                compLayer1Visible = !compLayer1Visible;
-                canvas.style.opacity = compLayer1Visible ? 1 : 0;
-                btn.style.opacity = compLayer1Visible ? 1 : 0.3;
-            } else {
-                compLayer2Visible = !compLayer2Visible;
-                updateCompareOpacity(); // Gère l'opacité du calque 2 en respectant le slider
-                btn.style.opacity = compLayer2Visible ? 1 : 0.3;
-            }
+            const canvas = document.getElementById('compareCanvas' + layerNum); const btn = document.getElementById('btn-eye-' + layerNum);
+            if (layerNum === 1) { compLayer1Visible = !compLayer1Visible; canvas.style.opacity = compLayer1Visible ? 1 : 0; btn.style.opacity = compLayer1Visible ? 1 : 0.3; } 
+            else { compLayer2Visible = !compLayer2Visible; updateCompareOpacity(); btn.style.opacity = compLayer2Visible ? 1 : 0.3; }
         }
 
         function toggleCompareAlign() {
-            compAlignMode = !compAlignMode;
-            const btn = document.getElementById('btn-align-mode');
-            const container = document.getElementById('compareContainer');
+            compAlignMode = !compAlignMode; const btn = document.getElementById('btn-align-mode'); const container = document.getElementById('compareContainer');
             if(compAlignMode) {
-                btn.classList.replace('bg-zinc-800', 'bg-amber-600');
-                btn.classList.replace('text-zinc-400', 'text-white');
-                container.style.cursor = 'move';
+                btn.classList.replace('bg-zinc-800', 'bg-amber-600'); btn.classList.replace('text-zinc-400', 'text-white'); container.style.cursor = 'move';
                 setStatus('compareStatus', "Mode Alignement : Cliquez et glissez pour déplacer le document révisé.", 'pending');
             } else {
-                btn.classList.replace('bg-amber-600', 'bg-zinc-800');
-                btn.classList.replace('text-white', 'text-zinc-400');
-                container.style.cursor = '';
+                btn.classList.replace('bg-amber-600', 'bg-zinc-800'); btn.classList.replace('text-white', 'text-zinc-400'); container.style.cursor = '';
                 setStatus('compareStatus', "Alignement terminé. Mode navigation standard actif.", 'success');
             }
         }
@@ -601,8 +727,7 @@
         let compPanZoomInit = false;
         function initComparePanZoomEvents() {
             if (compPanZoomInit) return; compPanZoomInit = true;
-            const container = document.getElementById('compareContainer');
-            const wrapper = document.getElementById('compareZoomWrapper');
+            const container = document.getElementById('compareContainer'); const wrapper = document.getElementById('compareZoomWrapper');
             const updateTransform = () => wrapper.style.transform = `translate(${compTx}px, ${compTy}px) scale(${compZoom})`;
 
             container.addEventListener('wheel', (e) => {
@@ -614,35 +739,15 @@
             }, { passive: false });
 
             container.addEventListener('mousedown', (e) => {
-                // Si on est en mode alignement et qu'on fait un clic gauche
-                if (compAlignMode && e.button === 0) {
-                    e.preventDefault(); isAligning = true;
-                    // On compense le zoom global pour que le déplacement du calque reste 1:1 avec la souris
-                    alignStartX = e.clientX - (compL2Tx * compZoom);
-                    alignStartY = e.clientY - (compL2Ty * compZoom);
-                } 
-                // Navigation standard (clic molette, ou clic gauche si pas en mode alignement)
-                else if (e.button === 1 || (!compAlignMode && e.button === 0)) { 
-                    e.preventDefault(); compIsPanning = true; compPanSx = e.clientX - compTx; compPanSy = e.clientY - compTy; container.style.cursor = 'grabbing'; 
-                }
+                if (compAlignMode && e.button === 0) { e.preventDefault(); isAligning = true; alignStartX = e.clientX - (compL2Tx * compZoom); alignStartY = e.clientY - (compL2Ty * compZoom); } 
+                else if (e.button === 1 || (!compAlignMode && e.button === 0)) { e.preventDefault(); compIsPanning = true; compPanSx = e.clientX - compTx; compPanSy = e.clientY - compTy; container.style.cursor = 'grabbing'; }
             });
             window.addEventListener('mousemove', (e) => { 
-                if (isAligning) {
-                    e.preventDefault();
-                    compL2Tx = (e.clientX - alignStartX) / compZoom;
-                    compL2Ty = (e.clientY - alignStartY) / compZoom;
-                    document.getElementById('compareCanvas2').style.transform = `translate(${compL2Tx}px, ${compL2Ty}px)`;
-                } else if (compIsPanning) {
-                    e.preventDefault(); compTx = e.clientX - compPanSx; compTy = e.clientY - compPanSy; updateTransform(); 
-                }
+                if (isAligning) { e.preventDefault(); compL2Tx = (e.clientX - alignStartX) / compZoom; compL2Ty = (e.clientY - alignStartY) / compZoom; document.getElementById('compareCanvas2').style.transform = `translate(${compL2Tx}px, ${compL2Ty}px)`; } 
+                else if (compIsPanning) { e.preventDefault(); compTx = e.clientX - compPanSx; compTy = e.clientY - compPanSy; updateTransform(); }
             });
-            window.addEventListener('mouseup', (e) => { 
-                if (isAligning) { isAligning = false; }
-                if (compIsPanning) { compIsPanning = false; container.style.cursor = compAlignMode ? 'move' : ''; } 
-            });
-            container.addEventListener('mouseleave', () => { 
-                compIsPanning = false; isAligning = false; container.style.cursor = compAlignMode ? 'move' : ''; 
-            });
+            window.addEventListener('mouseup', (e) => { if (isAligning) isAligning = false; if (compIsPanning) { compIsPanning = false; container.style.cursor = compAlignMode ? 'move' : ''; } });
+            container.addEventListener('mouseleave', () => { compIsPanning = false; isAligning = false; container.style.cursor = compAlignMode ? 'move' : ''; });
         }
 
 
