@@ -293,6 +293,30 @@
             </div>
         </div>
 
+        <!-- SECTION 5 : TXT TO JSON (NOUVEAU) -->
+        <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+            <button onclick="toggleSection('sec-json', 'icon-json')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
+                <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
+                    Text To JSON
+                </h2>
+                <svg id="icon-json" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            <div id="sec-json" class="p-6 hidden">
+                <div class="bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50">
+                    <textarea id="jsonPaste" placeholder="Collez votre texte brut ou données Clé: Valeur ici..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-300 outline-none focus:border-amber-500/50 resize-none h-32 mb-3" spellcheck="false"></textarea>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="h-px bg-zinc-800 flex-grow"></div>
+                        <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">OU</span>
+                        <div class="h-px bg-zinc-800 flex-grow"></div>
+                    </div>
+                    <input type="file" id="jsonInput" accept=".txt,.csv" class="block w-full text-xs text-zinc-500 mb-4 flex-grow outline-none">
+                    <button onclick="convertTxtToJson()" class="btn-action w-full max-w-xs mx-auto bg-amber-600 hover:bg-amber-500 text-white">Convertir en JSON</button>
+                    <p id="jsonStatus" class="text-[10px] mt-3 text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -791,6 +815,85 @@
             };
             if (pasteInput.trim()) processHtmlConversion(pasteInput, 'texte_converti.html'); 
             else { const file = fileInput.files[0]; const reader = new FileReader(); reader.onload = function(e) { processHtmlConversion(e.target.result, file.name.replace('.txt', '.html')); }; reader.readAsText(file); }
+        }
+
+        // --- 5. TXT TO JSON ---
+        function convertTxtToJson() {
+            const fileInput = document.getElementById('jsonInput'); 
+            const pasteInput = document.getElementById('jsonPaste').value;
+            
+            if (!fileInput.files.length && !pasteInput.trim()) {
+                return setStatus('jsonStatus', "Collez du texte ou sélectionnez un fichier", 'error');
+            }
+            
+            setStatus('jsonStatus', "Analyse et traitement...", 'pending');
+            
+            const processJsonConversion = (text, defaultFilename) => {
+                let finalObject;
+                let message = "Conversion réussie ✓";
+                
+                // 1. Tenter de parser si c'est déjà du JSON valide
+                try {
+                    finalObject = JSON.parse(text);
+                    message = "JSON validé et formaté ✓";
+                } catch (e) {
+                    // 2. Si ce n'est pas du JSON, on analyse le contenu
+                    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                    
+                    if (lines.length === 0) {
+                        return setStatus('jsonStatus', "Le texte est vide", 'error');
+                    }
+
+                    // Détection de format "Clé: Valeur" ou "Clé=Valeur"
+                    const keyValueRegex = /^([^:=]+)[:=](.*)$/;
+                    let isKeyValueFormat = true;
+                    let kvObject = {};
+
+                    for (let line of lines) {
+                        const match = line.match(keyValueRegex);
+                        if (match) {
+                            kvObject[match[1].trim()] = match[2].trim();
+                        } else {
+                            isKeyValueFormat = false;
+                            break;
+                        }
+                    }
+
+                    if (isKeyValueFormat && Object.keys(kvObject).length > 0) {
+                        // 2a. C'est une liste de clés/valeurs
+                        finalObject = kvObject;
+                        message = "Paires Clé/Valeur détectées et converties ✓";
+                    } else {
+                        // 2b. Texte brut standard : on crée un tableau de lignes
+                        finalObject = {
+                            document_type: "text_lines",
+                            line_count: lines.length,
+                            content: lines
+                        };
+                        message = "Texte brut converti en tableau JSON ✓";
+                    }
+                }
+                
+                // Créer le fichier JSON formaté (beautify avec 4 espaces)
+                const jsonString = JSON.stringify(finalObject, null, 4);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                
+                // Remplacer l'extension txt par json
+                const finalFilename = defaultFilename.replace(/\.[^/.]+$/, "") + ".json";
+                downloadFile(blob, finalFilename);
+                setStatus('jsonStatus', message, 'success');
+            };
+
+            if (pasteInput.trim()) {
+                processJsonConversion(pasteInput, 'donnees_converties.json'); 
+            } else {
+                const file = fileInput.files[0]; 
+                const reader = new FileReader(); 
+                reader.onload = function(e) { 
+                    processJsonConversion(e.target.result, file.name); 
+                }; 
+                reader.readAsText(file); 
+            }
         }
     </script>
 </body>
