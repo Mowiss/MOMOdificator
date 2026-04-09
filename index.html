@@ -9,6 +9,8 @@
     <!-- Bibliothèques pour la conversion -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- NOUVELLE LIBRAIRIE : pdf-lib pour la fusion et manipulation structurelle -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
@@ -269,31 +271,7 @@
             </div>
         </div>
 
-        <!-- SECTION 4 : TEXT TO HTML -->
-        <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
-            <button onclick="toggleSection('sec-html', 'icon-html')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
-                    Text To HTML
-                </h2>
-                <svg id="icon-html" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            <div id="sec-html" class="p-6 hidden">
-                <div class="bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50">
-                    <textarea id="txtPaste" placeholder="Collez votre code HTML ou texte ici..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-300 outline-none focus:border-amber-500/50 resize-none h-32 mb-3" spellcheck="false"></textarea>
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="h-px bg-zinc-800 flex-grow"></div>
-                        <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">OU</span>
-                        <div class="h-px bg-zinc-800 flex-grow"></div>
-                    </div>
-                    <input type="file" id="txtInput" accept=".txt" class="block w-full text-xs text-zinc-500 mb-4 flex-grow outline-none">
-                    <button onclick="convertTxtToHtml()" class="btn-action w-full max-w-xs mx-auto bg-amber-600 hover:bg-amber-500 text-white">Convertir en HTML</button>
-                    <p id="txtStatus" class="text-[10px] mt-3 text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 5 : TXT TO JSON (NOUVEAU) -->
+        <!-- SECTION 5 : TXT TO JSON -->
         <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
             <button onclick="toggleSection('sec-json', 'icon-json')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
                 <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
@@ -313,6 +291,30 @@
                     <input type="file" id="jsonInput" accept=".txt,.csv" class="block w-full text-xs text-zinc-500 mb-4 flex-grow outline-none">
                     <button onclick="convertTxtToJson()" class="btn-action w-full max-w-xs mx-auto bg-amber-600 hover:bg-amber-500 text-white">Convertir en JSON</button>
                     <p id="jsonStatus" class="text-[10px] mt-3 text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 6 : FUSION DE PDF (NOUVEAU) -->
+        <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+            <button onclick="toggleSection('sec-merge', 'icon-merge')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
+                <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    Fusion de PDF
+                </h2>
+                <svg id="icon-merge" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            <div id="sec-merge" class="p-6 hidden">
+                <div class="bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50 flex flex-col gap-4">
+                    <p class="text-xs text-zinc-400">Sélectionnez plusieurs fichiers PDF en même temps (Ctrl + Clic). Ils seront fusionnés dans l'ordre de votre sélection.</p>
+                    
+                    <input type="file" id="mergeInput" multiple accept=".pdf" class="block w-full text-xs text-zinc-500 outline-none" onchange="updateMergeList()">
+                    
+                    <!-- Affichage de la liste des fichiers sélectionnés -->
+                    <div id="mergeList" class="flex flex-col gap-1 text-[10px] text-zinc-500 font-mono bg-zinc-950 p-2 rounded-lg border border-zinc-800 hidden"></div>
+                    
+                    <button onclick="mergePdfs()" class="btn-action w-full max-w-xs mx-auto bg-amber-600 hover:bg-amber-500 text-white">Fusionner les PDF</button>
+                    <p id="mergeStatus" class="text-[10px] mt-2 text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
                 </div>
             </div>
         </div>
@@ -878,21 +880,70 @@
                 const jsonString = JSON.stringify(finalObject, null, 4);
                 const blob = new Blob([jsonString], { type: 'application/json' });
                 
-                // Remplacer l'extension txt par json
                 const finalFilename = defaultFilename.replace(/\.[^/.]+$/, "") + ".json";
                 downloadFile(blob, finalFilename);
                 setStatus('jsonStatus', message, 'success');
             };
 
-            if (pasteInput.trim()) {
-                processJsonConversion(pasteInput, 'donnees_converties.json'); 
-            } else {
-                const file = fileInput.files[0]; 
-                const reader = new FileReader(); 
-                reader.onload = function(e) { 
-                    processJsonConversion(e.target.result, file.name); 
-                }; 
-                reader.readAsText(file); 
+            if (pasteInput.trim()) { processJsonConversion(pasteInput, 'donnees_converties.json'); } 
+            else { const file = fileInput.files[0]; const reader = new FileReader(); reader.onload = function(e) { processJsonConversion(e.target.result, file.name); }; reader.readAsText(file); }
+        }
+
+        // --- 6. FUSION DE PDF ---
+        function updateMergeList() {
+            const input = document.getElementById('mergeInput');
+            const listDiv = document.getElementById('mergeList');
+            
+            if (input.files.length === 0) {
+                listDiv.classList.add('hidden');
+                listDiv.innerHTML = '';
+                return;
+            }
+            
+            listDiv.classList.remove('hidden');
+            let listHtml = '<span class="text-amber-500 font-bold mb-1 uppercase tracking-widest">Ordre de fusion :</span>';
+            
+            for (let i = 0; i < input.files.length; i++) {
+                listHtml += `<div>${i + 1}. ${input.files[i].name}</div>`;
+            }
+            
+            listDiv.innerHTML = listHtml;
+            setStatus('mergeStatus', `${input.files.length} fichier(s) prêt(s)`, 'pending');
+        }
+
+        async function mergePdfs() {
+            const input = document.getElementById('mergeInput');
+            if (input.files.length < 2) {
+                return setStatus('mergeStatus', "Sélectionnez au moins 2 PDF à fusionner.", 'error');
+            }
+
+            setStatus('mergeStatus', "Fusion en cours...", 'pending');
+
+            try {
+                // Utilisation de la librairie pdf-lib
+                const { PDFDocument } = window.PDFLib;
+                const mergedPdf = await PDFDocument.create();
+
+                // Parcourir chaque fichier sélectionné
+                for (let file of input.files) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await PDFDocument.load(arrayBuffer);
+                    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    copiedPages.forEach((page) => mergedPdf.addPage(page));
+                }
+
+                // Sauvegarder le nouveau PDF
+                const mergedPdfFile = await mergedPdf.save();
+                
+                // Créer le lien de téléchargement
+                const blob = new Blob([mergedPdfFile], { type: 'application/pdf' });
+                downloadFile(blob, `MOMO_Fusion_${new Date().getTime()}.pdf`);
+                
+                setStatus('mergeStatus', "Fusion réussie et document exporté ✓", 'success');
+
+            } catch (error) {
+                console.error(error);
+                setStatus('mergeStatus', "Erreur lors de la fusion des documents.", 'error');
             }
         }
     </script>
