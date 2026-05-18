@@ -5,947 +5,1004 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOMO édit & Convert - Outils Locaux</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Bibliothèques pour la conversion -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- NOUVELLE LIBRAIRIE : pdf-lib pour la fusion et manipulation structurelle -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&display=swap');
-        
-        body { 
-            font-family: 'Comfortaa', cursive; 
-            background-color: #000000; 
-        }
-        
-        .group-card {
-            @apply bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden transition-all shadow-xl flex flex-col h-full;
-        }
+        body { font-family:'Comfortaa',cursive; background-color:#000; }
+        .btn-action { @apply flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer; }
+        .btn-tool { @apply p-2 rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer flex items-center justify-center text-lg; width:40px;height:40px; }
+        .btn-tool.active { @apply bg-zinc-700 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]; }
+        input[type="file"]::file-selector-button { @apply mr-4 py-2 px-4 rounded-xl border-0 text-xs font-bold bg-zinc-900 text-amber-500 hover:bg-zinc-800 transition-colors cursor-pointer; }
+        ::-webkit-scrollbar{width:6px;height:6px} ::-webkit-scrollbar-track{background:#000} ::-webkit-scrollbar-thumb{background:#27272a;border-radius:3px}
+        #floatTextArea::placeholder{color:rgba(100,100,100,0.5)}
+        .align-btn.active{@apply bg-amber-600 text-white}
 
-        .btn-action {
-            @apply flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer;
-        }
-        
-        .btn-tool {
-            @apply p-2 rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer flex items-center justify-center text-lg;
-            width: 40px; height: 40px;
-        }
-        .btn-tool.active {
-            @apply bg-zinc-700 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)];
-        }
+        /* ── SECTIONS ORGANIQUES ── */
+        .section-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s cubic-bezier(.4,0,.2,1),opacity .35s cubic-bezier(.4,0,.2,1);opacity:0}
+        .section-body.open{grid-template-rows:1fr;opacity:1}
+        .section-body>.section-inner{overflow:hidden}
+        .section-chevron{transition:transform .4s cubic-bezier(.4,0,.2,1)}
+        .section-chevron.open{transform:rotate(180deg)}
 
-        /* Personnalisation des inputs de type fichier */
-        input[type="file"]::file-selector-button {
-            @apply mr-4 py-2 px-4 rounded-xl border-0 text-xs font-bold bg-zinc-900 text-amber-500 hover:bg-zinc-800 transition-colors cursor-pointer;
+        /* ── CONVERTISSEUR UNIVERSEL ── */
+        #convDropZone{
+            border:2px dashed #3f3f46;border-radius:14px;padding:32px 24px;text-align:center;
+            transition:border-color .25s,background .25s;cursor:pointer;
         }
+        #convDropZone:hover,#convDropZone.drag-active{border-color:#f59e0b;background:rgba(245,158,11,.04)}
+        #convDropZone.has-file{border-color:#3f3f46;padding:18px 20px;cursor:default;background:transparent}
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #000000; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+        #convFilePill{
+            display:inline-flex;align-items:center;gap:8px;
+            background:#18181b;border:1px solid #3f3f46;border-radius:10px;
+            padding:8px 14px;font-size:11px;color:#d4d4d8;font-weight:600;
+            max-width:100%;overflow:hidden;
+        }
+        #convFilePill .pill-ext{background:#f59e0b;color:#000;border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;letter-spacing:.05em;flex-shrink:0}
+        #convFilePill .pill-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        #convFilePill .pill-clear{color:#71717a;cursor:pointer;flex-shrink:0;padding:2px 5px;border-radius:4px;transition:color .15s,background .15s;border:none;background:none;font-size:14px;line-height:1}
+        #convFilePill .pill-clear:hover{color:#ef4444;background:rgba(239,68,68,.12)}
 
-        .rotate-180 { transform: rotate(180deg); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Source box */
+        #convSourceBox{
+            display:flex;flex-direction:column;align-items:center;gap:5px;
+            padding:14px 18px;border-radius:14px;border:2px solid #27272a;background:#09090b;
+            flex-shrink:0;opacity:0;transform:scale(.85);
+            transition:opacity .3s ease,transform .3s ease;
+        }
+        #convSourceBox.visible{opacity:1;transform:scale(1)}
+        .conv-source-ext{font-size:20px;font-weight:700;color:#71717a;font-family:monospace;line-height:1}
+        .conv-source-label{font-size:9px;color:#52525b;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
 
-        /* Styles spécifiques au textarea flottant */
-        #floatTextArea::placeholder { color: rgba(100, 100, 100, 0.5); }
-        .align-btn.active { @apply bg-amber-600 text-white; }
+        /* Flèche animée */
+        .conv-arrow{
+            display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;
+            opacity:0;transform:translateX(-10px);
+            transition:opacity .3s ease,transform .3s ease;
+        }
+        .conv-arrow.visible{opacity:1;transform:translateX(0)}
+        .conv-arrow svg path{stroke-dasharray:60;stroke-dashoffset:0;animation:arrowDash 1.6s ease-in-out infinite}
+        @keyframes arrowDash{0%,100%{opacity:.5;transform:translateX(0)}50%{opacity:1;transform:translateX(5px)}}
+
+        /* Bouton cible */
+        .conv-target-btn{
+            display:flex;flex-direction:column;align-items:center;gap:6px;
+            padding:14px 20px;border-radius:14px;border:2px solid #3f3f46;background:#09090b;
+            cursor:pointer;flex-shrink:0;
+            opacity:0;transform:scale(.85) translateY(8px);
+            transition:border-color .2s,background .2s,box-shadow .2s,opacity .3s ease,transform .3s ease;
+        }
+        .conv-target-btn.visible{opacity:1;transform:scale(1) translateY(0)}
+        .conv-target-btn:hover{border-color:#f59e0b;background:rgba(245,158,11,.06);box-shadow:0 0 20px rgba(245,158,11,.18);transform:translateY(-2px) scale(1.04)}
+        .conv-target-btn:active{transform:scale(.97)}
+        .conv-target-ext{font-size:20px;font-weight:700;color:#f59e0b;font-family:monospace;line-height:1}
+        .conv-target-label{font-size:9px;color:#71717a;font-weight:600;letter-spacing:.06em;text-transform:uppercase;text-align:center;line-height:1.4}
+
+        #convTargetRow{display:none}
+        #convTargetRow.show{display:flex;flex-direction:column;align-items:center;gap:16px}
+        #convTargets{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+
+        #convStatus{font-size:10px;text-align:center;font-weight:700;letter-spacing:.08em;text-transform:uppercase;min-height:16px}
+
+        /* ── FUSION PDF ── */
+        #mergePageGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;min-height:80px}
+        .merge-page-card{position:relative;background:#18181b;border:2px solid #3f3f46;border-radius:10px;overflow:hidden;cursor:grab;transition:border-color .2s,transform .2s,box-shadow .2s;user-select:none}
+        .merge-page-card:active{cursor:grabbing}
+        .merge-page-card:hover{border-color:#f59e0b;box-shadow:0 0 16px rgba(245,158,11,.2)}
+        .merge-page-card.dragging{opacity:.4;transform:scale(.97)}
+        .merge-page-card.drag-over{border-color:#f59e0b;border-style:dashed;transform:scale(1.03);box-shadow:0 0 20px rgba(245,158,11,.4)}
+        .merge-page-card img{width:100%;height:auto;display:block;pointer-events:none}
+        .merge-page-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:18px 6px 6px;font-size:9px;color:#a1a1aa;text-align:center;font-weight:600;letter-spacing:.05em;pointer-events:none}
+        .merge-page-delete{position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(239,68,68,.85);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;opacity:0;transition:opacity .15s;z-index:10;border:none}
+        .merge-page-card:hover .merge-page-delete{opacity:1}
+        .merge-page-num{position:absolute;top:4px;left:4px;background:rgba(0,0,0,.7);color:#f59e0b;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;pointer-events:none;font-family:monospace}
+        #mergeDropZone{border:2px dashed #3f3f46;border-radius:12px;padding:32px;text-align:center;transition:border-color .2s,background .2s;cursor:pointer}
+        #mergeDropZone.drag-active{border-color:#f59e0b;background:rgba(245,158,11,.05)}
+        @keyframes cardIn{from{opacity:0;transform:scale(.85) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        .merge-page-card{animation:cardIn .25s ease both}
+        /* ── COMPRESSION PDF ── */
+        .cmp-preset { transition: border-color .2s, box-shadow .2s; }
     </style>
 </head>
 <body class="text-zinc-300 min-h-screen p-4 md:p-8 flex flex-col items-center">
+<div class="max-w-5xl w-full mx-auto space-y-6">
 
-    <div class="max-w-5xl w-full mx-auto space-y-6">
-        
-        <!-- Header Principal -->
-        <div class="bg-zinc-950 rounded-2xl shadow-2xl p-6 border border-zinc-900 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden">
-            <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl"></div>
-            <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-3 z-10">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-                <span class="text-amber-500">MOMO</span> édit & Convert
-            </h1>
-            <p class="text-[10px] text-zinc-500 uppercase tracking-widest z-10">Traitement 100% local • Zéro donnée sur serveur</p>
-        </div>
-
-        <!-- SECTION 1 : MODIFICATION PDF -->
-        <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
-            <button onclick="toggleSection('sec-editor', 'icon-editor')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    Modification de PDF
-                </h2>
-                <svg id="icon-editor" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            
-            <div id="sec-editor" class="p-6 flex flex-col gap-4 hidden">
-                
-                <!-- Panneau de contrôle Éditeur -->
-                <div class="flex flex-col gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-                    
-                    <!-- Ligne 1 : Import / Export -->
-                    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 pb-4">
-                        <label class="btn-action bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer border border-zinc-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            Charger un fichier PDF à modifier
-                            <input type="file" id="editorPdfInput" accept=".pdf" class="hidden" onchange="loadPdfIntoEditor()">
-                        </label>
-                        
-                        <button onclick="exportEditedPdf()" id="btn-export-pdf" class="btn-action bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20 opacity-50 pointer-events-none transition-opacity">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Exporter le PDF modifié
-                        </button>
-                    </div>
-                    
-                    <!-- Ligne 2 : Outils (épurée) -->
-                    <div id="editorToolbar" class="flex flex-wrap items-center gap-3 opacity-50 pointer-events-none transition-opacity">
-                        
-                        <!-- Undo / Redo -->
-                        <div class="flex gap-1">
-                            <button id="btn-undo" onclick="undoAction()" class="btn-tool opacity-50 cursor-not-allowed" title="Annuler (Ctrl+Z)">↩️</button>
-                            <button id="btn-redo" onclick="redoAction()" class="btn-tool opacity-50 cursor-not-allowed" title="Rétablir (Ctrl+Y)">↪️</button>
-                        </div>
-                        
-                        <div class="h-6 w-px bg-zinc-700 mx-2"></div>
-
-                        <button id="tool-brush" onclick="selectTool('brush')" class="btn-tool active" title="Dessiner">✒️</button>
-                        <button id="tool-line" onclick="selectTool('line')" class="btn-tool" title="Ligne droite">📏</button>
-                        <button id="tool-eraser" onclick="selectTool('eraser')" class="btn-tool" title="Gomme">🧽</button>
-
-                        <div class="h-6 w-px bg-zinc-700 mx-2"></div>
-
-                        <!-- Sélecteur de couleur global -->
-                        <div class="relative">
-                            <button id="colorPickerBtn" onclick="toggleColorPopup()" class="btn-tool" title="Couleur du trait et du texte">⚫</button>
-                            <div id="colorPopup" class="absolute top-12 left-0 bg-zinc-800 border border-zinc-700 p-2 rounded-xl shadow-2xl flex gap-2 hidden z-50">
-                                <button onclick="setColor('#000000', '⚫')" class="hover:scale-110 transition-transform">⚫</button>
-                                <button onclick="setColor('#ef4444', '🔴')" class="hover:scale-110 transition-transform">🔴</button>
-                                <button onclick="setColor('#f97316', '🟠')" class="hover:scale-110 transition-transform">🟠</button>
-                                <button onclick="setColor('#eab308', '🟡')" class="hover:scale-110 transition-transform">🟡</button>
-                                <button onclick="setColor('#22c55e', '🟢')" class="hover:scale-110 transition-transform">🟢</button>
-                                <button onclick="setColor('#3b82f6', '🔵')" class="hover:scale-110 transition-transform">🔵</button>
-                                <button onclick="setColor('#a855f7', '🟣')" class="hover:scale-110 transition-transform">🟣</button>
-                            </div>
-                        </div>
-
-                        <div class="h-6 w-px bg-zinc-700 mx-2"></div>
-
-                        <!-- Outil Texte (Simplifié) -->
-                        <button id="tool-text" onclick="selectTool('text')" class="btn-tool font-sans font-bold text-sm" title="Ajouter du texte (Cliquez sur le PDF)">T</button>
-
-                        <div class="h-6 w-px bg-zinc-700 mx-2"></div>
-
-                        <!-- Tampon -->
-                        <button id="tool-stamp" onclick="selectTool('stamp')" class="btn-tool" title="Ajouter une image (Tampon)">🖼️</button>
-                        <input type="file" id="stampInput" accept="image/*" class="hidden" onchange="loadStampImage(event)">
-                        
-                        <div id="stampControls" class="flex items-center gap-2 hidden">
-                            <span class="text-[10px] text-zinc-500 font-bold uppercase">Taille:</span>
-                            <input type="range" id="stampScale" min="0.1" max="2" step="0.1" value="0.5" class="w-20 accent-amber-500">
-                        </div>
-                    </div>
-                </div>
-                
-                <p id="editorStatus" class="text-[10px] text-center text-zinc-500 uppercase tracking-widest font-bold h-4">En attente d'un document...</p>
-
-                <!-- Zone de rendu Éditeur -->
-                <div id="canvasContainer" class="relative overflow-hidden border border-zinc-800 rounded-lg bg-zinc-900/50 h-[600px] flex justify-center p-4 select-none">
-                    <div id="zoomWrapper" class="relative shadow-2xl origin-top-left transition-transform duration-75">
-                        <canvas id="pdfBgCanvas" class="absolute top-0 left-0"></canvas>
-                        <canvas id="pdfDrawCanvas" class="absolute top-0 left-0 cursor-crosshair z-10"></canvas>
-                        
-                        <!-- MODULE TEXTE FLOTTANT (Overlay) -->
-                        <div id="floatingTextWrapper" class="absolute hidden z-50" style="left: 50px; top: 50px;">
-                            
-                            <!-- Toolbar contextuelle du texte -->
-                            <div class="absolute -top-12 left-0 bg-zinc-800 border border-zinc-700 rounded-lg p-1.5 flex gap-2 shadow-2xl flex-nowrap items-center text-zinc-300 pointer-events-auto">
-                                <div id="dragTextHandle" class="cursor-move px-2 hover:text-white" title="Déplacer">✥</div>
-                                <div class="w-px h-5 bg-zinc-600"></div>
-                                
-                                <input type="number" id="floatTextSize" value="20" min="8" max="150" title="Taille de police" class="bg-zinc-950 text-white font-mono text-xs w-12 rounded py-1 px-1 outline-none text-center" onchange="updateFloatText()">
-                                
-                                <div class="w-px h-5 bg-zinc-600"></div>
-                                
-                                <button onclick="setFloatAlign('left')" id="btn-align-left" class="align-btn active px-2 py-1 hover:bg-zinc-700 rounded text-xs" title="Aligner à gauche">⫷</button>
-                                <button onclick="setFloatAlign('center')" id="btn-align-center" class="align-btn px-2 py-1 hover:bg-zinc-700 rounded text-xs" title="Centrer">≡</button>
-                                <button onclick="setFloatAlign('right')" id="btn-align-right" class="align-btn px-2 py-1 hover:bg-zinc-700 rounded text-xs" title="Aligner à droite">⫸</button>
-                                
-                                <div class="w-px h-5 bg-zinc-600"></div>
-                                
-                                <button onclick="bakeTextToCanvas()" class="text-emerald-500 hover:text-emerald-400 hover:bg-zinc-700 px-3 py-1 rounded font-bold text-xs" title="Valider et Imprimer">✓</button>
-                                <button onclick="cancelTextOverlay()" class="text-red-500 hover:text-red-400 hover:bg-zinc-700 px-3 py-1 rounded font-bold text-xs" title="Annuler">✗</button>
-                            </div>
-                            
-                            <!-- Zone de saisie redimensionnable -->
-                            <textarea id="floatTextArea" placeholder="Votre texte ici..." class="bg-amber-500/10 border-2 border-amber-500/50 text-black outline-none p-2 pointer-events-auto" style="min-width: 200px; min-height: 80px; resize: both; font-family: 'Comfortaa', cursive; line-height: 1.2;" oninput="updateFloatText()"></textarea>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 2 : CONTRÔLE DE VERSIONS -->
-        <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
-            <button onclick="toggleSection('sec-compare', 'icon-compare')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                    Contrôle de versions (Superposition)
-                </h2>
-                <svg id="icon-compare" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            
-            <div id="sec-compare" class="p-6 flex flex-col gap-4 hidden">
-                <div class="flex flex-col md:flex-row gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-                    <div class="flex-1 flex flex-col gap-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Document Original (Fond)</span>
-                            <button id="btn-eye-1" onclick="toggleCompareLayer(1)" class="text-amber-500 hover:text-white transition-colors" title="Afficher/Masquer le fond">👁️</button>
-                        </div>
-                        <input type="file" id="comparePdf1" accept=".pdf" class="block w-full text-xs text-zinc-500 outline-none" onchange="loadComparePdf(1)">
-                    </div>
-                    <div class="hidden md:block w-px bg-zinc-800"></div>
-                    <div class="flex-1 flex flex-col gap-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Document Révisé (Dessus)</span>
-                            <button id="btn-eye-2" onclick="toggleCompareLayer(2)" class="text-amber-500 hover:text-white transition-colors" title="Afficher/Masquer la révision">👁️</button>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <input type="file" id="comparePdf2" accept=".pdf" class="block w-full text-xs text-zinc-500 outline-none flex-1 min-w-[150px]" onchange="loadComparePdf(2)">
-                            <button id="btn-align-mode" onclick="toggleCompareAlign()" class="px-2 py-1 rounded bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700 transition-colors text-xs font-bold" title="Aligner manuellement le calque">🎯 Aligner</button>
-                            <div class="flex items-center gap-1 bg-zinc-950 px-2 py-1 rounded border border-zinc-800" title="Opacité du document révisé">
-                                <span class="text-[10px] text-zinc-500">Brouillard:</span>
-                                <input type="range" id="compareOpacity" min="0" max="1" step="0.1" value="0.5" class="w-16 accent-amber-500" oninput="updateCompareOpacity()">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <p id="compareStatus" class="text-[10px] text-center text-zinc-500 uppercase tracking-widest font-bold h-4">Chargez deux PDF pour les comparer</p>
-                <div id="compareContainer" class="relative overflow-hidden border border-zinc-800 rounded-lg h-[600px] flex justify-center p-4 select-none" style="background-image: linear-gradient(45deg, #18181b 25%, transparent 25%), linear-gradient(-45deg, #18181b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #18181b 75%), linear-gradient(-45deg, transparent 75%, #18181b 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; background-color: #09090b;">
-                    <div id="compareZoomWrapper" class="relative shadow-2xl origin-top-left transition-transform duration-75">
-                        <canvas id="compareCanvas1" class="absolute top-0 left-0 transition-opacity duration-200"></canvas>
-                        <canvas id="compareCanvas2" class="absolute top-0 left-0 transition-opacity duration-200 mix-blend-normal" style="opacity: 0.5;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 3 : PDF TO IMG / IMG TO PDF -->
-        <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
-            <button onclick="toggleSection('sec-media', 'icon-media')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    PDF to ... to PDF
-                </h2>
-                <svg id="icon-media" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            <div id="sec-media" class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 hidden">
-                <div class="flex flex-col h-full bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50">
-                    <div class="flex items-center justify-between mb-6">
-                        <span class="text-sm font-bold text-white">To PDF (Image JPG/PNG)</span>
-                        <span class="bg-zinc-900 border border-zinc-800 text-amber-500 px-2 py-1 rounded text-[10px] font-bold tracking-widest">PDF</span>
-                    </div>
-                    <input type="file" id="imgInput" accept="image/png, image/jpeg" class="block w-full text-xs text-zinc-500 mb-6 flex-grow outline-none">
-                    <div class="mt-auto">
-                        <button onclick="convertImgToPdf()" class="btn-action w-full bg-amber-600 hover:bg-amber-500 text-white">Convertir en PDF</button>
-                        <p id="imgStatus" class="text-[10px] mt-3 text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
-                    </div>
-                </div>
-                <div class="flex flex-col h-full bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50">
-                    <div class="flex items-center justify-between mb-6">
-                        <span class="text-sm font-bold text-white">To IMG (Fichier PDF)</span>
-                        <span class="bg-zinc-900 border border-zinc-800 text-amber-500 px-2 py-1 rounded text-[10px] font-bold tracking-widest">IMAGE</span>
-                    </div>
-                    <input type="file" id="pdfInput" accept=".pdf" class="block w-full text-xs text-zinc-500 mb-6 flex-grow outline-none">
-                    <div class="mt-auto flex gap-2">
-                        <button onclick="convertPdfToImg('image/png')" class="btn-action w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700">Export PNG</button>
-                        <button onclick="convertPdfToImg('image/jpeg')" class="btn-action w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700">Export JPG</button>
-                    </div>
-                    <p id="pdfStatus" class="text-[10px] mt-3 text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 5 : TXT TO JSON -->
-        <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
-            <button onclick="toggleSection('sec-json', 'icon-json')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
-                    Text To JSON
-                </h2>
-                <svg id="icon-json" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            <div id="sec-json" class="p-6 hidden">
-                <div class="bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50">
-                    <textarea id="jsonPaste" placeholder="Collez votre texte brut ou données Clé: Valeur ici..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-300 outline-none focus:border-amber-500/50 resize-none h-32 mb-3" spellcheck="false"></textarea>
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="h-px bg-zinc-800 flex-grow"></div>
-                        <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">OU</span>
-                        <div class="h-px bg-zinc-800 flex-grow"></div>
-                    </div>
-                    <input type="file" id="jsonInput" accept=".txt,.csv" class="block w-full text-xs text-zinc-500 mb-4 flex-grow outline-none">
-                    <button onclick="convertTxtToJson()" class="btn-action w-full max-w-xs mx-auto bg-amber-600 hover:bg-amber-500 text-white">Convertir en JSON</button>
-                    <p id="jsonStatus" class="text-[10px] mt-3 text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 6 : FUSION DE PDF (NOUVEAU) -->
-        <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
-            <button onclick="toggleSection('sec-merge', 'icon-merge')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                    Fusion de PDF
-                </h2>
-                <svg id="icon-merge" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            <div id="sec-merge" class="p-6 hidden">
-                <div class="bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/50 flex flex-col gap-4">
-                    <p class="text-xs text-zinc-400">Sélectionnez plusieurs fichiers PDF en même temps (Ctrl + Clic). Ils seront fusionnés dans l'ordre de votre sélection.</p>
-                    
-                    <input type="file" id="mergeInput" multiple accept=".pdf" class="block w-full text-xs text-zinc-500 outline-none" onchange="updateMergeList()">
-                    
-                    <!-- Affichage de la liste des fichiers sélectionnés -->
-                    <div id="mergeList" class="flex flex-col gap-1 text-[10px] text-zinc-500 font-mono bg-zinc-950 p-2 rounded-lg border border-zinc-800 hidden"></div>
-                    
-                    <button onclick="mergePdfs()" class="btn-action w-full max-w-xs mx-auto bg-amber-600 hover:bg-amber-500 text-white">Fusionner les PDF</button>
-                    <p id="mergeStatus" class="text-[10px] mt-2 text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
-                </div>
-            </div>
-        </div>
-
+    <!-- HEADER -->
+    <div class="bg-zinc-950 rounded-2xl shadow-2xl p-6 border border-zinc-900 flex flex-col items-center text-center gap-2 relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl"></div>
+        <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-3 z-10">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            <span class="text-amber-500">MOMO</span> édit & Convert
+        </h1>
+        <p class="text-[10px] text-zinc-500 uppercase tracking-widest z-10">Traitement 100% local • Zéro donnée sur serveur</p>
     </div>
 
-    <script>
-        // --- LOGIQUE UI ---
-        function toggleSection(sectionId, iconId) {
-            const section = document.getElementById(sectionId);
-            const icon = document.getElementById(iconId);
-            if (section.classList.contains('hidden')) {
-                section.classList.remove('hidden');
-                icon.classList.add('rotate-180');
-                if (sectionId === 'sec-compare') initComparePanZoomEvents();
-            } else {
-                section.classList.add('hidden');
-                icon.classList.remove('rotate-180');
-            }
+    <!-- ═══════════════════════════════════
+         SECTION 1 — MODIFICATION PDF
+    ═══════════════════════════════════ -->
+    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+        <button onclick="toggleSection('sec-editor','chev-editor')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                Modification de PDF
+            </h2>
+            <svg id="chev-editor" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="sec-editor" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-4">
+            <div class="flex flex-col gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+                    <label class="btn-action bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer border border-zinc-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Charger un fichier PDF à modifier
+                        <input type="file" id="editorPdfInput" accept=".pdf" class="hidden" onchange="loadPdfIntoEditor()">
+                    </label>
+                    <button onclick="exportEditedPdf()" id="btn-export-pdf" class="btn-action bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20 opacity-50 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Exporter le PDF modifié
+                    </button>
+                </div>
+                <div id="editorToolbar" class="flex flex-wrap items-center gap-3 opacity-50 pointer-events-none">
+                    <div class="flex gap-1">
+                        <button id="btn-undo" onclick="undoAction()" class="btn-tool opacity-50 cursor-not-allowed" title="Ctrl+Z">↩️</button>
+                        <button id="btn-redo" onclick="redoAction()" class="btn-tool opacity-50 cursor-not-allowed" title="Ctrl+Y">↪️</button>
+                    </div>
+                    <div class="h-6 w-px bg-zinc-700 mx-2"></div>
+                    <button id="tool-brush"  onclick="selectTool('brush')"  class="btn-tool active" title="Dessiner">✒️</button>
+                    <button id="tool-line"   onclick="selectTool('line')"   class="btn-tool" title="Ligne">📏</button>
+                    <button id="tool-eraser" onclick="selectTool('eraser')" class="btn-tool" title="Gomme">🧽</button>
+                    <div class="h-6 w-px bg-zinc-700 mx-2"></div>
+                    <div class="relative">
+                        <button id="colorPickerBtn" onclick="toggleColorPopup()" class="btn-tool" title="Couleur">⚫</button>
+                        <div id="colorPopup" class="absolute top-12 left-0 bg-zinc-800 border border-zinc-700 p-2 rounded-xl shadow-2xl flex gap-2 hidden z-50">
+                            <button onclick="setColor('#000000','⚫')" class="hover:scale-110 transition-transform">⚫</button>
+                            <button onclick="setColor('#ef4444','🔴')" class="hover:scale-110 transition-transform">🔴</button>
+                            <button onclick="setColor('#f97316','🟠')" class="hover:scale-110 transition-transform">🟠</button>
+                            <button onclick="setColor('#eab308','🟡')" class="hover:scale-110 transition-transform">🟡</button>
+                            <button onclick="setColor('#22c55e','🟢')" class="hover:scale-110 transition-transform">🟢</button>
+                            <button onclick="setColor('#3b82f6','🔵')" class="hover:scale-110 transition-transform">🔵</button>
+                            <button onclick="setColor('#a855f7','🟣')" class="hover:scale-110 transition-transform">🟣</button>
+                        </div>
+                    </div>
+                    <div class="h-6 w-px bg-zinc-700 mx-2"></div>
+                    <button id="tool-text"  onclick="selectTool('text')"  class="btn-tool font-sans font-bold text-sm" title="Texte">T</button>
+                    <div class="h-6 w-px bg-zinc-700 mx-2"></div>
+                    <button id="tool-stamp" onclick="selectTool('stamp')" class="btn-tool" title="Tampon image">🖼️</button>
+                    <input type="file" id="stampInput" accept="image/*" class="hidden" onchange="loadStampImage(event)">
+                    <div id="stampControls" class="flex items-center gap-2 hidden">
+                        <span class="text-[10px] text-zinc-500 font-bold uppercase">Taille:</span>
+                        <input type="range" id="stampScale" min="0.1" max="2" step="0.1" value="0.5" class="w-20 accent-amber-500">
+                    </div>
+                </div>
+            </div>
+            <p id="editorStatus" class="text-[10px] text-center text-zinc-500 uppercase tracking-widest font-bold h-4">En attente d'un document...</p>
+            <div id="canvasContainer" class="relative overflow-hidden border border-zinc-800 rounded-lg bg-zinc-900/50 h-[600px] flex justify-center p-4 select-none">
+                <div id="zoomWrapper" class="relative shadow-2xl origin-top-left transition-transform duration-75">
+                    <canvas id="pdfBgCanvas" class="absolute top-0 left-0"></canvas>
+                    <canvas id="pdfDrawCanvas" class="absolute top-0 left-0 cursor-crosshair z-10"></canvas>
+                    <div id="floatingTextWrapper" class="absolute hidden z-50" style="left:50px;top:50px">
+                        <div class="absolute -top-12 left-0 bg-zinc-800 border border-zinc-700 rounded-lg p-1.5 flex gap-2 shadow-2xl flex-nowrap items-center text-zinc-300 pointer-events-auto">
+                            <div id="dragTextHandle" class="cursor-move px-2 hover:text-white">✥</div>
+                            <div class="w-px h-5 bg-zinc-600"></div>
+                            <input type="number" id="floatTextSize" value="20" min="8" max="150" class="bg-zinc-950 text-white font-mono text-xs w-12 rounded py-1 px-1 outline-none text-center" onchange="updateFloatText()">
+                            <div class="w-px h-5 bg-zinc-600"></div>
+                            <button onclick="setFloatAlign('left')"   id="btn-align-left"   class="align-btn active px-2 py-1 hover:bg-zinc-700 rounded text-xs">⫷</button>
+                            <button onclick="setFloatAlign('center')" id="btn-align-center" class="align-btn px-2 py-1 hover:bg-zinc-700 rounded text-xs">≡</button>
+                            <button onclick="setFloatAlign('right')"  id="btn-align-right"  class="align-btn px-2 py-1 hover:bg-zinc-700 rounded text-xs">⫸</button>
+                            <div class="w-px h-5 bg-zinc-600"></div>
+                            <button onclick="bakeTextToCanvas()"  class="text-emerald-500 hover:text-emerald-400 hover:bg-zinc-700 px-3 py-1 rounded font-bold text-xs">✓</button>
+                            <button onclick="cancelTextOverlay()" class="text-red-500 hover:text-red-400 hover:bg-zinc-700 px-3 py-1 rounded font-bold text-xs">✗</button>
+                        </div>
+                        <textarea id="floatTextArea" placeholder="Votre texte ici..." class="bg-amber-500/10 border-2 border-amber-500/50 text-black outline-none p-2 pointer-events-auto" style="min-width:200px;min-height:80px;resize:both;font-family:'Comfortaa',cursive;line-height:1.2" oninput="updateFloatText()"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div></div></div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         SECTION 2 — CONVERTISSEUR UNIVERSEL
+    ═══════════════════════════════════ -->
+    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+        <button onclick="toggleSection('sec-conv','chev-conv')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Convertir un fichier
+            </h2>
+            <svg id="chev-conv" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="sec-conv" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-6">
+
+            <!-- Zone de dépôt -->
+            <div id="convDropZone" onclick="convTriggerInput()" ondragover="convOnDragOver(event)" ondragleave="convOnDragLeave()" ondrop="convOnDrop(event)">
+                <input type="file" id="convFileInput" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp" onchange="convHandleFile(this.files[0])">
+                <!-- État vide -->
+                <div id="convEmptyState" class="flex flex-col items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                    <p class="text-sm font-bold text-zinc-400">Déposez ou cliquez pour choisir un fichier</p>
+                    <p class="text-[10px] text-zinc-600 uppercase tracking-widest">PDF · JPG · PNG · WEBP</p>
+                </div>
+                <!-- État fichier chargé -->
+                <div id="convLoadedState" class="hidden items-center justify-center">
+                    <div id="convFilePill">
+                        <span class="pill-ext" id="convPillExt">PDF</span>
+                        <span class="pill-name" id="convPillName">fichier.pdf</span>
+                        <button class="pill-clear" onclick="convClearFile(event)" title="Changer">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rangée source → cibles -->
+            <div id="convTargetRow">
+                <div id="convTargets">
+                    <div id="convSourceBox">
+                        <div class="conv-source-ext" id="convSrcExt">PDF</div>
+                        <div class="conv-source-label">Source</div>
+                    </div>
+                    <!-- flèches + boutons injectés par JS -->
+                </div>
+                <p id="convStatus"></p>
+            </div>
+
+        </div></div></div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         SECTION 3 — FUSION & ASSEMBLAGE PDF
+    ═══════════════════════════════════ -->
+    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+        <button onclick="toggleSection('sec-merge','chev-merge')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                Fusion & Assemblage de PDF
+            </h2>
+            <svg id="chev-merge" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="sec-merge" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-5">
+            <div id="mergeDropZone" onclick="document.getElementById('mergeFileInput').click()" class="flex flex-col items-center gap-3">
+                <input type="file" id="mergeFileInput" multiple accept=".pdf" class="hidden" onchange="addMergeFiles(event)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <p class="text-xs text-zinc-500 font-bold">Cliquez pour ajouter des PDF</p>
+                <p class="text-[10px] text-zinc-600">Plusieurs fichiers possibles · Pages apparaissent ci-dessous</p>
+            </div>
+            <div id="mergeToolbar" class="hidden items-center justify-between gap-4 flex-wrap">
+                <span id="mergePagesCount" class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold"></span>
+                <div class="flex gap-2">
+                    <button onclick="document.getElementById('mergeFileInput').click()" class="btn-action bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[10px]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Ajouter des PDF
+                    </button>
+                    <button onclick="clearAllMergePages()" class="btn-action bg-zinc-900 hover:bg-red-950 text-zinc-500 hover:text-red-400 border border-zinc-800 text-[10px]">Tout effacer</button>
+                </div>
+            </div>
+            <div id="mergePageGrid" class="hidden"></div>
+            <p id="mergeDragHint" class="hidden text-[10px] text-center text-zinc-600 uppercase tracking-widest">Glissez les vignettes pour réorganiser les pages</p>
+            <button id="btn-merge-export" onclick="exportMergedPdf()" class="btn-action w-full max-w-xs mx-auto bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20 hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Exporter le PDF assemblé
+            </button>
+            <p id="mergeStatus" class="text-[10px] text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
+        </div></div></div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         SECTION 4 — COMPRESSION PDF
+    ═══════════════════════════════════ -->
+    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+        <button onclick="toggleSection('sec-compress','chev-compress')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                Compression de PDF
+            </h2>
+            <svg id="chev-compress" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="sec-compress" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-5">
+
+            <!-- Zone de dépôt -->
+            <div id="cmpDropZone" onclick="cmpTriggerInput()" ondragover="cmpOnDragOver(event)" ondragleave="cmpOnDragLeave()" ondrop="cmpOnDrop(event)" class="border-2 border-dashed border-zinc-700 rounded-xl p-7 text-center cursor-pointer transition-all hover:border-amber-500/60 hover:bg-amber-500/[0.03]">
+                <input type="file" id="cmpFileInput" accept=".pdf" class="hidden" onchange="cmpHandleFile(this.files[0])">
+                <div id="cmpEmptyState" class="flex flex-col items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <p class="text-sm font-bold text-zinc-400">Déposez un PDF ou cliquez pour choisir</p>
+                </div>
+                <div id="cmpLoadedState" class="hidden items-center justify-between gap-4 flex-wrap">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="bg-amber-500 text-black text-[9px] font-bold px-2 py-1 rounded-md flex-shrink-0">PDF</span>
+                        <span id="cmpFileName" class="text-sm font-bold text-zinc-200 truncate"></span>
+                        <span id="cmpOrigSize" class="text-[10px] text-zinc-500 flex-shrink-0"></span>
+                    </div>
+                    <button onclick="cmpClearFile(event)" class="text-zinc-600 hover:text-red-400 transition-colors text-xs flex-shrink-0 border border-zinc-800 rounded-lg px-3 py-1.5 hover:border-red-800">Changer</button>
+                </div>
+            </div>
+
+            <!-- Préréglages + bouton (visibles après chargement) -->
+            <div id="cmpControls" class="hidden flex-col gap-5">
+
+                <!-- 3 préréglages -->
+                <div class="flex gap-3 flex-wrap">
+
+                    <button onclick="cmpSelectPreset('light')" id="cmp-preset-light"
+                        class="cmp-preset flex-1 min-w-[110px] flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-zinc-700 bg-zinc-900/60 hover:border-zinc-500 transition-all cursor-pointer">
+                        <span class="text-2xl">🪶</span>
+                        <span class="text-xs font-bold text-zinc-100 tracking-wide">Léger</span>
+                        <div class="flex flex-col items-center gap-0.5">
+                            <span class="text-[9px] text-amber-500 font-bold font-mono">150 dpi · 75%</span>
+                            <span class="text-[9px] text-zinc-600 leading-tight text-center">Bonne qualité<br>réduction modérée</span>
+                        </div>
+                    </button>
+
+                    <button onclick="cmpSelectPreset('medium')" id="cmp-preset-medium"
+                        class="cmp-preset flex-1 min-w-[110px] flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-zinc-700 bg-zinc-900/60 hover:border-zinc-500 transition-all cursor-pointer">
+                        <span class="text-2xl">⚖️</span>
+                        <span class="text-xs font-bold text-zinc-100 tracking-wide">Moyen</span>
+                        <div class="flex flex-col items-center gap-0.5">
+                            <span class="text-[9px] text-amber-500 font-bold font-mono">96 dpi · 60%</span>
+                            <span class="text-[9px] text-zinc-600 leading-tight text-center">Bon compromis<br>taille/qualité</span>
+                        </div>
+                    </button>
+
+                    <button onclick="cmpSelectPreset('strong')" id="cmp-preset-strong"
+                        class="cmp-preset flex-1 min-w-[110px] flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-zinc-700 bg-zinc-900/60 hover:border-zinc-500 transition-all cursor-pointer">
+                        <span class="text-2xl">🗜️</span>
+                        <span class="text-xs font-bold text-zinc-100 tracking-wide">Fort</span>
+                        <div class="flex flex-col items-center gap-0.5">
+                            <span class="text-[9px] text-amber-500 font-bold font-mono">72 dpi · 40%</span>
+                            <span class="text-[9px] text-zinc-600 leading-tight text-center">Fichier minimal<br>qualité réduite</span>
+                        </div>
+                    </button>
+
+                </div>
+
+                <!-- Note technique discrète -->
+                <p class="text-[9px] text-zinc-700 text-center leading-relaxed">
+                    ⚠️ Chaque page est rasterisée en image JPEG — le texte ne sera plus sélectionnable dans le résultat.
+                </p>
+
+                <!-- Barre de progression -->
+                <div id="cmpProgressWrap" class="hidden flex-col gap-2">
+                    <div class="flex justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                        <span id="cmpProgressLabel">Traitement…</span>
+                        <span id="cmpProgressPct">0%</span>
+                    </div>
+                    <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div id="cmpProgressBar" class="h-full bg-amber-500 rounded-full transition-all duration-150" style="width:0%"></div>
+                    </div>
+                </div>
+
+                <!-- Bouton compresser (désactivé tant qu'aucun preset sélectionné) -->
+                <button id="cmpRunBtn" onclick="cmpRun()"
+                    class="btn-action w-full max-w-xs mx-auto bg-zinc-700 text-zinc-400 border border-zinc-600 pointer-events-none opacity-50 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    <span id="cmpRunLabel">Choisir un préréglage</span>
+                </button>
+
+                <!-- Résultat -->
+                <div id="cmpResult" class="hidden flex-col gap-4">
+
+                    <!-- Ratio avant / après -->
+                    <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 flex items-center justify-around gap-4 flex-wrap">
+                        <div class="flex flex-col items-center gap-1">
+                            <span class="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Avant</span>
+                            <span id="cmpBeforeSize" class="text-xl font-bold text-zinc-400 font-mono">—</span>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                        <div class="flex flex-col items-center gap-1">
+                            <span class="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Après</span>
+                            <span id="cmpAfterSize" class="text-xl font-bold text-emerald-400 font-mono">—</span>
+                        </div>
+                        <div class="h-8 w-px bg-zinc-700"></div>
+                        <div class="flex flex-col items-center gap-1">
+                            <span class="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Réduction</span>
+                            <span id="cmpRatio" class="text-3xl font-bold font-mono">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Aperçu 1ère page -->
+                    <div class="flex flex-col gap-2">
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Aperçu — 1ère page</span>
+                        <img id="cmpPreviewImg" src="" alt="Aperçu" class="rounded-xl border border-zinc-800 max-h-72 object-contain w-full bg-zinc-900/50">
+                    </div>
+
+                    <!-- Téléchargement -->
+                    <button onclick="cmpDownload()" class="btn-action w-full max-w-xs mx-auto bg-emerald-700 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-900/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Télécharger le PDF compressé
+                    </button>
+
+                </div>
+
+            </div><!-- /cmpControls -->
+
+        </div></div></div>
+    </div>
+
+
+</div><!-- /max-w-5xl -->
+
+<script>
+// ================================================================
+// UTILITAIRES
+// ================================================================
+function toggleSection(id,chevId){
+    const s=document.getElementById(id),c=document.getElementById(chevId),o=s.classList.contains('open');
+    s.classList.toggle('open',!o); c.classList.toggle('open',!o);
+}
+function downloadFile(blob,name){
+    const u=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=u;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+}
+function setStatus(id,msg,type){
+    const el=document.getElementById(id);if(!el)return;
+    el.textContent=msg;
+    el.className=type==='error'?'text-[10px] mt-3 text-center text-red-400 uppercase tracking-widest font-bold h-4':
+                 type==='success'?'text-[10px] mt-3 text-center text-emerald-400 uppercase tracking-widest font-bold h-4':
+                 'text-[10px] mt-3 text-center text-amber-500 uppercase tracking-widest font-bold h-4';
+}
+
+// ================================================================
+// SECTION 1 — ÉDITEUR PDF
+// ================================================================
+let currentEditorTool='brush',currentDrawColor='#000000';
+let isDrawing=false,lastX=0,lastY=0,drawingSnapshot=null;
+let editorOriginalFileName='document',pdfWidth=0,pdfHeight=0;
+let currentZoom=1,isPanning=false,panStartX=0,panStartY=0,translateX=0,translateY=0;
+let stampImageObj=null,undoStack=[],redoStack=[];const MAX_HISTORY=30;
+let floatTextAlign='left',isDraggingFloatText=false,dragTxtStartX=0,dragTxtStartY=0;
+
+function updateUndoRedoUI(){
+    const u=document.getElementById('btn-undo'),r=document.getElementById('btn-redo');
+    [u,r].forEach((b,i)=>{const e=i?!redoStack.length:!undoStack.length;b.classList.toggle('opacity-50',e);b.classList.toggle('cursor-not-allowed',e);});
+}
+function saveState(){const c=document.getElementById('pdfDrawCanvas');undoStack.push(c.getContext('2d').getImageData(0,0,c.width,c.height));if(undoStack.length>MAX_HISTORY)undoStack.shift();redoStack=[];updateUndoRedoUI();}
+function undoAction(){if(!undoStack.length)return;const c=document.getElementById('pdfDrawCanvas'),x=c.getContext('2d');redoStack.push(x.getImageData(0,0,c.width,c.height));x.putImageData(undoStack.pop(),0,0);updateUndoRedoUI();}
+function redoAction(){if(!redoStack.length)return;const c=document.getElementById('pdfDrawCanvas'),x=c.getContext('2d');undoStack.push(x.getImageData(0,0,c.width,c.height));x.putImageData(redoStack.pop(),0,0);updateUndoRedoUI();}
+document.addEventListener('keydown',e=>{if(!document.getElementById('sec-editor').classList.contains('open'))return;if(e.ctrlKey&&e.key==='z'){e.preventDefault();undoAction();}if(e.ctrlKey&&e.key==='y'){e.preventDefault();redoAction();}});
+function toggleColorPopup(){document.getElementById('colorPopup').classList.toggle('hidden');}
+function setColor(hex,emoji){
+    currentDrawColor=hex;document.getElementById('colorPickerBtn').innerText=emoji;
+    document.getElementById('colorPopup').classList.add('hidden');
+    const ftw=document.getElementById('floatingTextWrapper');
+    if(!ftw.classList.contains('hidden'))document.getElementById('floatTextArea').style.color=hex;
+    else if(currentEditorTool==='eraser'||currentEditorTool==='stamp')selectTool('brush');
+}
+function selectTool(t){
+    cancelTextOverlay();currentEditorTool=t;
+    document.querySelectorAll('#editorToolbar .btn-tool').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tool-'+t).classList.add('active');
+    const dc=document.getElementById('pdfDrawCanvas'),sc=document.getElementById('stampControls');
+    if(t==='stamp'){sc.classList.remove('hidden');if(!stampImageObj)document.getElementById('stampInput').click();}else sc.classList.add('hidden');
+    dc.style.cursor=t==='text'?'text':t==='stamp'?'cell':'crosshair';
+}
+function openTextOverlay(x,y){
+    const w=document.getElementById('floatingTextWrapper');
+    w.style.left=x+'px';w.style.top=y+'px';w.classList.remove('hidden');
+    document.getElementById('floatTextArea').value='';updateFloatText();
+    document.getElementById('floatTextArea').focus();
+    setStatus('editorStatus',"Tapez votre texte · ✓ pour valider",'pending');
+}
+function cancelTextOverlay(){
+    document.getElementById('floatingTextWrapper').classList.add('hidden');
+    if(currentEditorTool==='text')setStatus('editorStatus',"Mode Texte : cliquez sur le PDF pour insérer.",'success');
+}
+function setFloatAlign(a){
+    floatTextAlign=a;document.querySelectorAll('.align-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('btn-align-'+a).classList.add('active');
+    document.getElementById('floatTextArea').style.textAlign=a;
+}
+function updateFloatText(){const ta=document.getElementById('floatTextArea');ta.style.fontSize=(document.getElementById('floatTextSize').value||20)+'px';ta.style.color=currentDrawColor;}
+function bakeTextToCanvas(){
+    const w=document.getElementById('floatingTextWrapper'),ta=document.getElementById('floatTextArea');
+    if(!ta.value.trim()){cancelTextOverlay();return;}
+    saveState();
+    const c=document.getElementById('pdfDrawCanvas'),ctx=c.getContext('2d');
+    const fs=parseInt(document.getElementById('floatTextSize').value)||20;
+    const bx=parseFloat(w.style.left),by=parseFloat(w.style.top),pad=8,bw=ta.clientWidth-pad*2;
+    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.fillStyle=currentDrawColor;
+    ctx.font=`${fs}px 'Comfortaa',cursive`;ctx.textBaseline='top';
+    const lines=ta.value.split('\n');let cy=by+pad;const lh=fs*1.2;
+    for(const raw of lines){const words=raw.split(' ');let line='';
+        for(let n=0;n<words.length;n++){const test=line+words[n]+' ';if(ctx.measureText(test).width>bw&&n>0){dtl(ctx,line,bx,cy,bw,pad);line=words[n]+' ';cy+=lh;}else line=test;}
+        dtl(ctx,line,bx,cy,bw,pad);cy+=lh;}
+    cancelTextOverlay();setStatus('editorStatus',"Texte imprimé ✓",'success');
+}
+function dtl(ctx,text,x,y,bw,pad){
+    let dx=x+pad;
+    if(floatTextAlign==='center'){dx=x+pad+bw/2;ctx.textAlign='center';}
+    else if(floatTextAlign==='right'){dx=x+pad+bw;ctx.textAlign='right';}
+    else ctx.textAlign='left';
+    ctx.fillText(text.trimEnd(),dx,y);
+}
+document.getElementById('dragTextHandle').onmousedown=e=>{
+    if(e.button!==0)return;isDraggingFloatText=true;
+    const w=document.getElementById('floatingTextWrapper');
+    dragTxtStartX=e.clientX-(parseFloat(w.style.left)*currentZoom);
+    dragTxtStartY=e.clientY-(parseFloat(w.style.top)*currentZoom);
+    e.stopPropagation();
+};
+window.addEventListener('mousemove',e=>{
+    if(isDraggingFloatText){const w=document.getElementById('floatingTextWrapper');
+        w.style.left=((e.clientX-dragTxtStartX)/currentZoom)+'px';
+        w.style.top=((e.clientY-dragTxtStartY)/currentZoom)+'px';}
+});
+window.addEventListener('mouseup',()=>isDraggingFloatText=false);
+function loadStampImage(ev){
+    const f=ev.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{stampImageObj=img;setStatus('editorStatus',"Tampon prêt.",'success');};img.src=e.target.result;};r.readAsDataURL(f);
+}
+document.addEventListener('click',ev=>{
+    const btn=document.getElementById('colorPickerBtn'),pop=document.getElementById('colorPopup');
+    if(ev.target!==btn&&!pop.contains(ev.target))pop.classList.add('hidden');
+});
+async function loadPdfIntoEditor(){
+    const fi=document.getElementById('editorPdfInput');if(!fi.files.length)return;
+    setStatus('editorStatus',"Chargement...",'pending');
+    const file=fi.files[0];editorOriginalFileName=file.name.replace(/\.[^/.]+$/,'');
+    const reader=new FileReader();
+    reader.onload=async e=>{
+        try{
+            const ta=new Uint8Array(e.target.result),pdf=await pdfjsLib.getDocument({data:ta}).promise;
+            const page=await pdf.getPage(1),vp=page.getViewport({scale:1.5});
+            const bg=document.getElementById('pdfBgCanvas'),dc=document.getElementById('pdfDrawCanvas');
+            pdfWidth=vp.width;pdfHeight=vp.height;
+            bg.width=dc.width=vp.width;bg.height=dc.height=vp.height;
+            bg.parentElement.style.width=vp.width+'px';bg.parentElement.style.height=vp.height+'px';
+            await page.render({canvasContext:bg.getContext('2d'),viewport:vp}).promise;
+            dc.getContext('2d').clearRect(0,0,dc.width,dc.height);
+            undoStack=[];redoStack=[];updateUndoRedoUI();cancelTextOverlay();
+            document.getElementById('editorToolbar').classList.remove('opacity-50','pointer-events-none');
+            document.getElementById('btn-export-pdf').classList.remove('opacity-50','pointer-events-none');
+            currentZoom=1;translateX=0;translateY=0;
+            document.getElementById('zoomWrapper').style.transform='translate(0px,0px) scale(1)';
+            setStatus('editorStatus',"PDF prêt · Molette=zoom · Clic molette=déplacer",'success');
+            initDrawingEvents(dc,dc.getContext('2d'));initPanZoomEvents();
+        }catch{setStatus('editorStatus',"Erreur de lecture.",'error');}
+    };reader.readAsArrayBuffer(file);
+}
+function initDrawingEvents(canvas,ctx){
+    canvas.onmousedown=canvas.onmousemove=canvas.onmouseup=canvas.onmouseout=null;
+    const gp=e=>{const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/currentZoom,y:(e.clientY-r.top)/currentZoom};};
+    canvas.onmousedown=e=>{
+        if(e.button!==0)return;const p=gp(e);
+        if(currentEditorTool==='text'){if(!document.getElementById('floatingTextWrapper').classList.contains('hidden'))return;openTextOverlay(p.x,p.y);return;}
+        saveState();
+        if(currentEditorTool==='stamp'){
+            if(!stampImageObj){undoStack.pop();updateUndoRedoUI();return setStatus('editorStatus',"Aucune image.",'error');}
+            const sc=parseFloat(document.getElementById('stampScale').value),dw=stampImageObj.width*sc,dh=stampImageObj.height*sc;
+            ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.drawImage(stampImageObj,p.x-dw/2,p.y-dh/2,dw,dh);
+            setStatus('editorStatus',"Tampon appliqué ✓",'success');return;
         }
-
-        function downloadFile(blob, filename) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        isDrawing=true;[lastX,lastY]=[p.x,p.y];
+        if(currentEditorTool==='line')drawingSnapshot=ctx.getImageData(0,0,canvas.width,canvas.height);
+    };
+    canvas.onmousemove=e=>{
+        if(!isDrawing)return;const p=gp(e);
+        if(currentEditorTool==='line'){
+            ctx.putImageData(drawingSnapshot,0,0);ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);
+            ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.strokeStyle=currentDrawColor;ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();return;
         }
+        ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);
+        if(currentEditorTool==='eraser'){ctx.globalCompositeOperation='destination-out';ctx.globalAlpha=1;ctx.lineWidth=30;}
+        else{ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.strokeStyle=currentDrawColor;ctx.lineWidth=3;}
+        ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();[lastX,lastY]=[p.x,p.y];
+    };
+    canvas.onmouseup=()=>{if(isDrawing&&currentEditorTool==='line')drawingSnapshot=null;isDrawing=false;};
+    canvas.onmouseout=()=>isDrawing=false;
+}
+let editorPanZoomInit=false;
+function initPanZoomEvents(){
+    if(editorPanZoomInit)return;editorPanZoomInit=true;
+    const cont=document.getElementById('canvasContainer'),wrap=document.getElementById('zoomWrapper'),dc=document.getElementById('pdfDrawCanvas');
+    const upd=()=>wrap.style.transform=`translate(${translateX}px,${translateY}px) scale(${currentZoom})`;
+    cont.addEventListener('wheel',e=>{
+        e.preventDefault();const r=cont.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+        const tx=(mx-translateX)/currentZoom,ty=(my-translateY)/currentZoom;
+        let nz=currentZoom+((e.deltaY<0?1:-1)*0.05);nz=Math.min(Math.max(0.5,nz),4);
+        translateX=mx-tx*nz;translateY=my-ty*nz;currentZoom=nz;upd();
+    },{passive:false});
+    cont.addEventListener('mousedown',e=>{if(e.button===1){e.preventDefault();isPanning=true;panStartX=e.clientX-translateX;panStartY=e.clientY-translateY;cont.style.cursor='grabbing';dc.style.pointerEvents='none';}});
+    window.addEventListener('mousemove',e=>{if(!isPanning)return;e.preventDefault();translateX=e.clientX-panStartX;translateY=e.clientY-panStartY;upd();});
+    window.addEventListener('mouseup',e=>{if(e.button===1&&isPanning){isPanning=false;cont.style.cursor='';dc.style.pointerEvents='auto';}});
+}
+async function exportEditedPdf(){
+    if(!pdfWidth)return setStatus('editorStatus',"Aucun PDF chargé",'error');
+    if(!document.getElementById('floatingTextWrapper').classList.contains('hidden'))bakeTextToCanvas();
+    setStatus('editorStatus',"Export...",'pending');
+    const mc=document.createElement('canvas').getContext('2d');mc.canvas.width=pdfWidth;mc.canvas.height=pdfHeight;
+    mc.fillStyle='#fff';mc.fillRect(0,0,pdfWidth,pdfHeight);
+    mc.drawImage(document.getElementById('pdfBgCanvas'),0,0);mc.drawImage(document.getElementById('pdfDrawCanvas'),0,0);
+    const{jsPDF}=window.jspdf,doc=new jsPDF({orientation:pdfWidth>pdfHeight?'l':'p',unit:'px',format:[pdfWidth,pdfHeight]});
+    doc.addImage(mc.canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pdfWidth,pdfHeight);
+    doc.save(`${editorOriginalFileName}_modifié.pdf`);setStatus('editorStatus',"PDF exporté ✓",'success');
+}
 
-        function setStatus(elementId, message, type) {
-            const el = document.getElementById(elementId);
-            el.textContent = message;
-            if(type === 'error') el.className = "text-[10px] mt-3 text-center text-red-400 uppercase tracking-widest font-bold h-4";
-            else if(type === 'success') el.className = "text-[10px] mt-3 text-center text-emerald-400 uppercase tracking-widest font-bold h-4";
-            else el.className = "text-[10px] mt-3 text-center text-amber-500 uppercase tracking-widest font-bold h-4";
-        }
+// ================================================================
+// SECTION 2 — CONVERTISSEUR UNIVERSEL
+// ================================================================
+const CONV_TABLE={
+    pdf:[
+        {ext:'PNG',  label:'Image haute\nqualité',  fn:()=>doConvPdfToImg('image/png')},
+        {ext:'JPG',  label:'Image\ncompressée',     fn:()=>doConvPdfToImg('image/jpeg')},
+        {ext:'WEBP', label:'Image\nWeb optimisée',  fn:()=>doConvPdfToImg('image/webp')},
+    ],
+    jpg:[
+        {ext:'PDF',  label:'Document\nPDF',         fn:doConvImgToPdf},
+        {ext:'PNG',  label:'Sans perte\n(PNG)',      fn:()=>doConvImgToImg('image/png','.png')},
+        {ext:'WEBP', label:'Web optimisé\n(WebP)',   fn:()=>doConvImgToImg('image/webp','.webp')},
+    ],
+    jpeg:[
+        {ext:'PDF',  label:'Document\nPDF',         fn:doConvImgToPdf},
+        {ext:'PNG',  label:'Sans perte\n(PNG)',      fn:()=>doConvImgToImg('image/png','.png')},
+        {ext:'WEBP', label:'Web optimisé\n(WebP)',   fn:()=>doConvImgToImg('image/webp','.webp')},
+    ],
+    png:[
+        {ext:'PDF',  label:'Document\nPDF',         fn:doConvImgToPdf},
+        {ext:'JPG',  label:'Compressé\n(JPG)',       fn:()=>doConvImgToImg('image/jpeg','.jpg')},
+        {ext:'WEBP', label:'Web optimisé\n(WebP)',   fn:()=>doConvImgToImg('image/webp','.webp')},
+    ],
+    webp:[
+        {ext:'PNG',  label:'Sans perte\n(PNG)',      fn:()=>doConvImgToImg('image/png','.png')},
+        {ext:'JPG',  label:'Compressé\n(JPG)',       fn:()=>doConvImgToImg('image/jpeg','.jpg')},
+        {ext:'PDF',  label:'Document\nPDF',         fn:doConvImgToPdf},
+    ],
+};
+let convCurrentFile=null;
 
-        // --- 1. ÉDITEUR PDF & MODULE TEXTE FLOTTANT ---
-        let currentEditorTool = 'brush'; let currentDrawColor = '#000000'; let isDrawing = false; let lastX = 0, lastY = 0; let drawingSnapshot = null;
-        let editorOriginalFileName = "document"; let pdfWidth = 0, pdfHeight = 0;
-        let currentZoom = 1; let isPanning = false; let panStartX = 0, panStartY = 0; let translateX = 0, translateY = 0;
-        let stampImageObj = null; let undoStack = []; let redoStack = []; const MAX_HISTORY = 30;
+function convTriggerInput(){if(!convCurrentFile)document.getElementById('convFileInput').click();}
+function convOnDragOver(e){e.preventDefault();document.getElementById('convDropZone').classList.add('drag-active');}
+function convOnDragLeave(){document.getElementById('convDropZone').classList.remove('drag-active');}
+function convOnDrop(e){e.preventDefault();document.getElementById('convDropZone').classList.remove('drag-active');const f=e.dataTransfer.files[0];if(f)convHandleFile(f);}
 
-        // Variables Texte Flottant
-        let floatTextAlign = 'left';
-        let isDraggingFloatText = false;
-        let dragTxtStartX = 0, dragTxtStartY = 0;
+function convHandleFile(file){
+    if(!file)return;
+    const ext=file.name.split('.').pop().toLowerCase();
+    const convStatus=document.getElementById('convStatus');
+    if(!CONV_TABLE[ext]){convStatus.textContent='Format non pris en charge (PDF, JPG, PNG, WEBP).';convStatus.style.color='#f87171';return;}
+    convCurrentFile=file;
+    document.getElementById('convPillExt').textContent=ext.toUpperCase();
+    document.getElementById('convPillName').textContent=file.name;
+    const dz=document.getElementById('convDropZone');
+    dz.classList.add('has-file');
+    document.getElementById('convEmptyState').classList.add('hidden');
+    const ls=document.getElementById('convLoadedState');ls.classList.remove('hidden');ls.classList.add('flex');
+    convShowTargets(ext);
+}
 
-        function updateUndoRedoUI() {
-            const btnUndo = document.getElementById('btn-undo'); const btnRedo = document.getElementById('btn-redo');
-            if (undoStack.length > 0) btnUndo.classList.remove('opacity-50', 'cursor-not-allowed'); else btnUndo.classList.add('opacity-50', 'cursor-not-allowed');
-            if (redoStack.length > 0) btnRedo.classList.remove('opacity-50', 'cursor-not-allowed'); else btnRedo.classList.add('opacity-50', 'cursor-not-allowed');
-        }
+function convClearFile(e){
+    e.stopPropagation();convCurrentFile=null;
+    document.getElementById('convFileInput').value='';
+    const dz=document.getElementById('convDropZone');dz.classList.remove('has-file');
+    document.getElementById('convEmptyState').classList.remove('hidden');
+    const ls=document.getElementById('convLoadedState');ls.classList.add('hidden');ls.classList.remove('flex');
+    // Reset la rangée cibles
+    const row=document.getElementById('convTargetRow');row.classList.remove('show');
+    const container=document.getElementById('convTargets');
+    while(container.children.length>1)container.removeChild(container.lastChild);
+    document.getElementById('convSourceBox').classList.remove('visible');
+    document.getElementById('convStatus').textContent='';document.getElementById('convStatus').style.color='';
+}
 
-        function saveState() {
-            const canvas = document.getElementById('pdfDrawCanvas'); const ctx = canvas.getContext('2d');
-            undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-            if (undoStack.length > MAX_HISTORY) undoStack.shift();
-            redoStack = []; updateUndoRedoUI();
-        }
+function convShowTargets(ext){
+    const targets=CONV_TABLE[ext];
+    const container=document.getElementById('convTargets');
+    const srcBox=document.getElementById('convSourceBox');
+    document.getElementById('convSrcExt').textContent=ext.toUpperCase();
+    // Nettoyer anciens éléments dynamiques
+    while(container.children.length>1)container.removeChild(container.lastChild);
+    srcBox.classList.remove('visible');
 
-        function undoAction() {
-            if (undoStack.length === 0) return;
-            const canvas = document.getElementById('pdfDrawCanvas'); const ctx = canvas.getContext('2d');
-            redoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-            const prevState = undoStack.pop(); ctx.putImageData(prevState, 0, 0); updateUndoRedoUI();
-        }
+    targets.forEach((tgt,i)=>{
+        const arrow=document.createElement('div');
+        arrow.className='conv-arrow';
+        arrow.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="24" viewBox="0 0 36 24" fill="none"><path d="M2 12 H32 M22 3 L32 12 L22 21" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-        function redoAction() {
-            if (redoStack.length === 0) return;
-            const canvas = document.getElementById('pdfDrawCanvas'); const ctx = canvas.getContext('2d');
-            undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-            const nextState = redoStack.pop(); ctx.putImageData(nextState, 0, 0); updateUndoRedoUI();
-        }
+        const btn=document.createElement('button');
+        btn.className='conv-target-btn';
+        btn.innerHTML=`<div class="conv-target-ext">${tgt.ext}</div><div class="conv-target-label">${tgt.label.replace('\n','<br>')}</div>`;
+        btn.onclick=()=>tgt.fn();
 
-        document.addEventListener('keydown', function(e) {
-            if(!document.getElementById('sec-editor').classList.contains('hidden') && e.ctrlKey) {
-                if (e.key === 'z') { e.preventDefault(); undoAction(); }
-                if (e.key === 'y') { e.preventDefault(); redoAction(); }
-            }
+        container.appendChild(arrow);
+        container.appendChild(btn);
+    });
+
+    const row=document.getElementById('convTargetRow');
+    row.classList.add('show');
+    document.getElementById('convStatus').textContent='';document.getElementById('convStatus').style.color='';
+
+    // Déclencher les animations avec délais
+    requestAnimationFrame(()=>{
+        setTimeout(()=>srcBox.classList.add('visible'),30);
+        container.querySelectorAll('.conv-arrow,.conv-target-btn').forEach((el,i)=>{
+            setTimeout(()=>el.classList.add('visible'),80+i*60);
         });
+    });
+}
 
-        function toggleColorPopup() { document.getElementById('colorPopup').classList.toggle('hidden'); }
+function convSetStatus(msg,color){
+    const el=document.getElementById('convStatus');el.textContent=msg;el.style.color=color;
+}
 
-        function setColor(hexCode, emoji) {
-            currentDrawColor = hexCode; document.getElementById('colorPickerBtn').innerText = emoji;
-            document.getElementById('colorPopup').classList.add('hidden');
-            
-            // Appliquer la couleur immédiatement si le module texte est ouvert
-            if(!document.getElementById('floatingTextWrapper').classList.contains('hidden')) {
-                document.getElementById('floatTextArea').style.color = currentDrawColor;
-            } else if(currentEditorTool === 'eraser' || currentEditorTool === 'stamp') {
-                selectTool('brush');
-            }
-        }
+async function doConvPdfToImg(mimeType){
+    if(!convCurrentFile)return;
+    const ext=mimeType==='image/png'?'.png':'.jpg';
+    convSetStatus('Extraction en cours…','#f59e0b');
+    try{
+        const buf=await convCurrentFile.arrayBuffer();
+        const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+        const page=await pdf.getPage(1),vp=page.getViewport({scale:2.0});
+        const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+        await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+        c.toBlob(blob=>{
+            downloadFile(blob,convCurrentFile.name.replace('.pdf',`_page1${ext}`));
+            convSetStatus('Conversion réussie ✓','#34d399');
+        },mimeType,0.95);
+    }catch{convSetStatus('Erreur lors de la conversion.','#f87171');}
+}
 
-        function selectTool(toolName) {
-            // Si on change d'outil alors que le texte flottant est ouvert, on l'annule par sécurité
-            cancelTextOverlay();
-            
-            currentEditorTool = toolName;
-            document.querySelectorAll('#editorToolbar .btn-tool').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('tool-' + toolName).classList.add('active');
-            
-            const drawCanvas = document.getElementById('pdfDrawCanvas');
-            const stampControls = document.getElementById('stampControls');
-            
-            if(toolName === 'stamp') { stampControls.classList.remove('hidden'); if(!stampImageObj) document.getElementById('stampInput').click(); } 
-            else stampControls.classList.add('hidden');
-
-            if(toolName === 'text') drawCanvas.style.cursor = 'text'; else if (toolName === 'stamp') drawCanvas.style.cursor = 'cell'; else drawCanvas.style.cursor = 'crosshair';
-        }
-
-        // --- GESTION DU TEXTE FLOTTANT ---
-
-        function openTextOverlay(x, y) {
-            const wrapper = document.getElementById('floatingTextWrapper');
-            const textarea = document.getElementById('floatTextArea');
-            
-            wrapper.style.left = x + 'px';
-            wrapper.style.top = y + 'px';
-            wrapper.classList.remove('hidden');
-            
-            textarea.value = '';
-            updateFloatText();
-            textarea.focus();
-            setStatus('editorStatus', "Tapez votre texte, ajustez le cadre, et cliquez sur ✓ pour valider.", 'pending');
-        }
-
-        function cancelTextOverlay() {
-            document.getElementById('floatingTextWrapper').classList.add('hidden');
-            if (currentEditorTool === 'text') setStatus('editorStatus', "Mode Texte : Cliquez sur le PDF pour insérer une zone.", 'success');
-        }
-
-        function setFloatAlign(align) {
-            floatTextAlign = align;
-            document.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('btn-align-' + align).classList.add('active');
-            document.getElementById('floatTextArea').style.textAlign = align;
-        }
-
-        function updateFloatText() {
-            const textarea = document.getElementById('floatTextArea');
-            const size = document.getElementById('floatTextSize').value || 20;
-            textarea.style.fontSize = size + 'px';
-            textarea.style.color = currentDrawColor;
-        }
-
-        function bakeTextToCanvas() {
-            const wrapper = document.getElementById('floatingTextWrapper');
-            const textarea = document.getElementById('floatTextArea');
-            const text = textarea.value;
-            
-            if (!text.trim()) { cancelTextOverlay(); return; }
-
-            saveState();
-
-            const canvas = document.getElementById('pdfDrawCanvas');
-            const ctx = canvas.getContext('2d');
-            const fontSize = parseInt(document.getElementById('floatTextSize').value) || 20;
-            
-            // Récupérer la position relative au canevas
-            const boxX = parseFloat(wrapper.style.left);
-            const boxY = parseFloat(wrapper.style.top);
-            
-            // Déduction exacte du padding CSS (p-2 = 8px) pour que le mot passe à la ligne au même endroit
-            const padding = 8; 
-            const boxWidth = textarea.clientWidth - (padding * 2); 
-            
-            ctx.globalCompositeOperation = "source-over";
-            ctx.globalAlpha = 1.0;
-            ctx.fillStyle = currentDrawColor;
-            
-            // On utilise exactement la même police et graisse que le textarea
-            ctx.font = `${fontSize}px 'Comfortaa', cursive`;
-            ctx.textBaseline = "top";
-
-            // Logique de Wrapping (Retour à la ligne automatique synchronisé)
-            const lines = text.split('\n');
-            let currentY = boxY + padding;
-            const lineHeight = fontSize * 1.2; // Synchronisé avec le line-height CSS
-            
-            for (let i = 0; i < lines.length; i++) {
-                const words = lines[i].split(' ');
-                let line = '';
-                
-                for (let n = 0; n < words.length; n++) {
-                    const testLine = line + words[n] + ' ';
-                    const metrics = ctx.measureText(testLine);
-                    if (metrics.width > boxWidth && n > 0) {
-                        drawTextLine(ctx, line, boxX, currentY, boxWidth, padding);
-                        line = words[n] + ' ';
-                        currentY += lineHeight;
-                    } else {
-                        line = testLine;
-                    }
-                }
-                drawTextLine(ctx, line, boxX, currentY, boxWidth, padding);
-                currentY += lineHeight;
-            }
-
-            cancelTextOverlay();
-            setStatus('editorStatus', "Texte imprimé avec succès ✓", 'success');
-        }
-
-        function drawTextLine(ctx, text, x, y, boxWidth, padding) {
-            let drawX = x + padding;
-            if (floatTextAlign === 'center') {
-                drawX = x + padding + (boxWidth / 2);
-                ctx.textAlign = 'center';
-            } else if (floatTextAlign === 'right') {
-                drawX = x + padding + boxWidth;
-                ctx.textAlign = 'right';
-            } else {
-                ctx.textAlign = 'left';
-            }
-            // trimEnd() évite que des espaces invisibles en fin de ligne ne faussent l'alignement à droite ou centré
-            ctx.fillText(text.trimEnd(), drawX, y); 
-        }
-
-        // Glisser-déposer du module texte
-        document.getElementById('dragTextHandle').onmousedown = (e) => {
-            if (e.button !== 0) return;
-            isDraggingFloatText = true;
-            const wrapper = document.getElementById('floatingTextWrapper');
-            // Calculer le décalage initial
-            dragTxtStartX = e.clientX - (parseFloat(wrapper.style.left) * currentZoom);
-            dragTxtStartY = e.clientY - (parseFloat(wrapper.style.top) * currentZoom);
-            e.stopPropagation(); // Évite que le canvas prenne le focus
+async function doConvImgToPdf(){
+    if(!convCurrentFile)return;
+    convSetStatus('Génération du PDF…','#f59e0b');
+    const reader=new FileReader();
+    reader.onload=e=>{
+        const img=new Image();img.src=e.target.result;
+        img.onload=()=>{
+            try{
+                const{jsPDF}=window.jspdf;
+                const doc=new jsPDF({orientation:img.width>img.height?'l':'p',unit:'px',format:[img.width,img.height]});
+                doc.addImage(img.src,convCurrentFile.type==='image/png'?'PNG':'JPEG',0,0,img.width,img.height);
+                doc.save(convCurrentFile.name.replace(/\.[^/.]+$/,'')+'.pdf');
+                convSetStatus('Conversion réussie ✓','#34d399');
+            }catch{convSetStatus('Erreur lors de la conversion.','#f87171');}
         };
-        window.addEventListener('mousemove', (e) => {
-            if (isDraggingFloatText) {
-                const wrapper = document.getElementById('floatingTextWrapper');
-                wrapper.style.left = ((e.clientX - dragTxtStartX) / currentZoom) + 'px';
-                wrapper.style.top = ((e.clientY - dragTxtStartY) / currentZoom) + 'px';
-            }
-        });
-        window.addEventListener('mouseup', () => { isDraggingFloatText = false; });
+    };
+    reader.readAsDataURL(convCurrentFile);
+}
 
+async function doConvImgToImg(mimeType, extOut){
+    if(!convCurrentFile)return;
+    convSetStatus('Conversion en cours…','#f59e0b');
+    const reader=new FileReader();
+    reader.onload=e=>{
+        const img=new Image();img.src=e.target.result;
+        img.onload=()=>{
+            try{
+                const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+                c.getContext('2d').drawImage(img,0,0);
+                c.toBlob(blob=>{
+                    if(!blob){convSetStatus('Format non supporté par ce navigateur.','#f87171');return;}
+                    downloadFile(blob,convCurrentFile.name.replace(/\.[^/.]+$/,'')+extOut);
+                    convSetStatus('Conversion réussie ✓','#34d399');
+                },mimeType,0.92);
+            }catch{convSetStatus('Erreur lors de la conversion.','#f87171');}
+        };
+    };
+    reader.readAsDataURL(convCurrentFile);
+}
 
-        function loadStampImage(event) {
-            const file = event.target.files[0]; if(!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image(); img.onload = function() { stampImageObj = img; setStatus('editorStatus', "Tampon prêt. Cliquez sur le PDF pour le placer.", 'success'); };
-                img.src = e.target.result;
-            }; reader.readAsDataURL(file);
+// ================================================================
+// SECTION 3 — FUSION PDF
+// ================================================================
+let mergePages=[],dragSrcIndex=null;
+
+async function addMergeFiles(event){
+    const files=Array.from(event.target.files);if(!files.length)return;
+    setStatus('mergeStatus',"Chargement des pages...",'pending');
+    for(const file of files){
+        const ab=await file.arrayBuffer();
+        const pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab.slice())}).promise;
+        for(let i=0;i<pdf.numPages;i++){
+            const page=await pdf.getPage(i+1),vp=page.getViewport({scale:0.4});
+            const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+            await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+            mergePages.push({pdfBytes:ab.slice(),pageIndex:i,fileName:file.name,canvasDataUrl:c.toDataURL('image/jpeg',0.7)});
+        }
+    }
+    event.target.value='';renderMergeGrid();
+    setStatus('mergeStatus',`${mergePages.length} page(s) — glissez pour réorganiser`,'success');
+}
+
+function renderMergeGrid(){
+    const grid=document.getElementById('mergePageGrid'),tb=document.getElementById('mergeToolbar');
+    const hint=document.getElementById('mergeDragHint'),exp=document.getElementById('btn-merge-export');
+    const dz=document.getElementById('mergeDropZone');
+    if(!mergePages.length){[grid,hint,exp].forEach(el=>el.classList.add('hidden'));tb.classList.remove('flex');tb.classList.add('hidden');dz.classList.remove('hidden');setStatus('mergeStatus','','pending');return;}
+    dz.classList.add('hidden');[grid,hint,exp].forEach(el=>el.classList.remove('hidden'));tb.classList.remove('hidden');tb.classList.add('flex');
+    document.getElementById('mergePagesCount').textContent=`${mergePages.length} page${mergePages.length>1?'s':''}`;
+    grid.innerHTML='';
+    mergePages.forEach((pg,idx)=>{
+        const card=document.createElement('div');card.className='merge-page-card';card.draggable=true;
+        card.style.animationDelay=`${Math.min(idx*30,300)}ms`;
+        const num=document.createElement('div');num.className='merge-page-num';num.textContent=idx+1;
+        const img=document.createElement('img');img.src=pg.canvasDataUrl;img.style.cssText='width:100%;height:auto;display:block;pointer-events:none';
+        const lbl=document.createElement('div');lbl.className='merge-page-label';
+        lbl.textContent=`${pg.fileName.length>18?pg.fileName.substring(0,15)+'…':pg.fileName} · p.${pg.pageIndex+1}`;
+        const del=document.createElement('button');del.className='merge-page-delete';del.innerHTML='✕';
+        del.onclick=e=>{e.stopPropagation();mergePages.splice(idx,1);renderMergeGrid();setStatus('mergeStatus',`${mergePages.length} page(s) restante(s)`,'pending');};
+        card.append(num,img,lbl,del);
+        card.addEventListener('dragstart',e=>{dragSrcIndex=idx;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+        card.addEventListener('dragend',()=>{card.classList.remove('dragging');document.querySelectorAll('.merge-page-card.drag-over').forEach(c=>c.classList.remove('drag-over'));});
+        card.addEventListener('dragover',e=>{e.preventDefault();document.querySelectorAll('.merge-page-card.drag-over').forEach(c=>c.classList.remove('drag-over'));if(idx!==dragSrcIndex)card.classList.add('drag-over');});
+        card.addEventListener('dragleave',()=>card.classList.remove('drag-over'));
+        card.addEventListener('drop',e=>{e.preventDefault();card.classList.remove('drag-over');if(dragSrcIndex===null||dragSrcIndex===idx)return;mergePages.splice(idx,0,mergePages.splice(dragSrcIndex,1)[0]);dragSrcIndex=null;renderMergeGrid();setStatus('mergeStatus',"Pages réorganisées ✓",'success');});
+        grid.appendChild(card);
+    });
+}
+
+function clearAllMergePages(){mergePages=[];renderMergeGrid();}
+
+async function exportMergedPdf(){
+    if(!mergePages.length)return setStatus('mergeStatus',"Aucune page à exporter.",'error');
+    setStatus('mergeStatus',"Assemblage...",'pending');
+    try{
+        const{PDFDocument}=window.PDFLib,out=await PDFDocument.create();
+        for(const pg of mergePages){const src=await PDFDocument.load(pg.pdfBytes);const[p]=await out.copyPages(src,[pg.pageIndex]);out.addPage(p);}
+        const bytes=await out.save();
+        downloadFile(new Blob([bytes],{type:'application/pdf'}),`MOMO_Assemblage_${Date.now()}.pdf`);
+        setStatus('mergeStatus',`PDF exporté — ${mergePages.length} page(s) ✓`,'success');
+    }catch(err){console.error(err);setStatus('mergeStatus',"Erreur d'assemblage.",'error');}
+}
+
+const mDZ=document.getElementById('mergeDropZone');
+mDZ.addEventListener('dragover',e=>{e.preventDefault();mDZ.classList.add('drag-active');});
+mDZ.addEventListener('dragleave',()=>mDZ.classList.remove('drag-active'));
+mDZ.addEventListener('drop',async e=>{
+    e.preventDefault();mDZ.classList.remove('drag-active');
+    const files=Array.from(e.dataTransfer.files).filter(f=>f.type==='application/pdf');
+    if(!files.length)return setStatus('mergeStatus',"Seuls les PDF sont acceptés.",'error');
+    await addMergeFiles({target:{files,value:''}});
+});
+
+// ================================================================
+// SECTION 4 — COMPRESSION PDF
+// ================================================================
+// Préréglages : qualité JPEG (0-1) + DPI de rasterisation
+const CMP_PRESETS={
+    light:  {quality:0.75, dpi:150},
+    medium: {quality:0.60, dpi:96},
+    strong: {quality:0.40, dpi:72},
+};
+let cmpFile=null, cmpResultBlob=null, cmpResultName='', cmpCurrentPreset=null;
+
+function cmpTriggerInput(){document.getElementById('cmpFileInput').click();}
+function cmpOnDragOver(e){e.preventDefault();document.getElementById('cmpDropZone').classList.add('border-amber-500/60','bg-amber-500/[0.03]');}
+function cmpOnDragLeave(){document.getElementById('cmpDropZone').classList.remove('border-amber-500/60','bg-amber-500/[0.03]');}
+function cmpOnDrop(e){e.preventDefault();cmpOnDragLeave();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')cmpHandleFile(f);}
+
+function cmpShow(id,flex){const el=document.getElementById(id);el.classList.toggle('hidden',!flex);el.classList.toggle('flex',!!flex);}
+
+function cmpHandleFile(file){
+    cmpFile=file; cmpResultBlob=null; cmpCurrentPreset=null;
+    document.getElementById('cmpFileName').textContent=file.name;
+    document.getElementById('cmpOrigSize').textContent=cmpFmtSize(file.size);
+    cmpShow('cmpEmptyState',false); cmpShow('cmpLoadedState',true);
+    cmpShow('cmpControls',true); cmpShow('cmpResult',false); cmpShow('cmpProgressWrap',false);
+    // Désélectionner tous les presets visuellement
+    document.querySelectorAll('.cmp-preset').forEach(b=>cmpPresetStyle(b,false));
+    // Bouton compresser : désactivé jusqu'à sélection
+    cmpSetRunBtn(false);
+}
+
+function cmpClearFile(e){
+    e.stopPropagation(); cmpFile=null; cmpResultBlob=null; cmpCurrentPreset=null;
+    document.getElementById('cmpFileInput').value='';
+    cmpShow('cmpEmptyState',true); cmpShow('cmpLoadedState',false);
+    cmpShow('cmpControls',false); cmpShow('cmpResult',false);
+}
+
+function cmpFmtSize(bytes){
+    if(bytes<1024)return bytes+' o';
+    if(bytes<1024*1024)return (bytes/1024).toFixed(1)+' Ko';
+    return (bytes/(1024*1024)).toFixed(2)+' Mo';
+}
+
+function cmpPresetStyle(btn, active){
+    if(active){
+        btn.classList.add('border-amber-500','shadow-[0_0_16px_rgba(245,158,11,0.25)]');
+        btn.classList.remove('border-zinc-700');
+    } else {
+        btn.classList.remove('border-amber-500','shadow-[0_0_16px_rgba(245,158,11,0.25)]');
+        btn.classList.add('border-zinc-700');
+    }
+}
+
+function cmpSetRunBtn(active){
+    const btn=document.getElementById('cmpRunBtn'), lbl=document.getElementById('cmpRunLabel');
+    if(active){
+        const name={light:'Léger',medium:'Moyen',strong:'Fort'}[cmpCurrentPreset]||'';
+        lbl.textContent=`Compresser — ${name}`;
+        btn.classList.remove('bg-zinc-700','text-zinc-400','border-zinc-600','pointer-events-none','opacity-50');
+        btn.classList.add('bg-amber-600','hover:bg-amber-500','text-white','border-transparent');
+    } else {
+        lbl.textContent='Choisir un préréglage';
+        btn.classList.add('bg-zinc-700','text-zinc-400','border-zinc-600','pointer-events-none','opacity-50');
+        btn.classList.remove('bg-amber-600','hover:bg-amber-500','text-white','border-transparent');
+    }
+}
+
+function cmpSelectPreset(name){
+    cmpCurrentPreset=name;
+    document.querySelectorAll('.cmp-preset').forEach(b=>cmpPresetStyle(b,false));
+    cmpPresetStyle(document.getElementById('cmp-preset-'+name), true);
+    cmpShow('cmpResult',false);
+    cmpSetRunBtn(true);
+}
+
+function cmpSetProgress(pct,label){
+    document.getElementById('cmpProgressBar').style.width=pct+'%';
+    document.getElementById('cmpProgressPct').textContent=Math.round(pct)+'%';
+    if(label)document.getElementById('cmpProgressLabel').textContent=label;
+}
+
+async function cmpRun(){
+    if(!cmpFile||!cmpCurrentPreset)return;
+    const{quality,dpi}=CMP_PRESETS[cmpCurrentPreset];
+    const scale=dpi/72;
+
+    cmpShow('cmpProgressWrap',true); cmpShow('cmpResult',false);
+    document.getElementById('cmpRunBtn').classList.add('opacity-50','pointer-events-none');
+    document.getElementById('cmpProgressBar').style.background='#f59e0b';
+    cmpSetProgress(2,'Lecture du PDF…');
+
+    try{
+        const{PDFDocument}=window.PDFLib;
+        const buf=await cmpFile.arrayBuffer();
+        const srcPdf=await pdfjsLib.getDocument({data:new Uint8Array(buf.slice())}).promise;
+        const numPages=srcPdf.numPages;
+        const outPdf=await PDFDocument.create();
+
+        // Supprimer métadonnées (toujours)
+        outPdf.setTitle('');outPdf.setAuthor('');outPdf.setSubject('');
+        outPdf.setKeywords([]);outPdf.setProducer('MOMO édit & Convert');outPdf.setCreator('MOMO édit & Convert');
+
+        let previewDataUrl=null;
+
+        for(let i=0;i<numPages;i++){
+            cmpSetProgress(5+(i/numPages)*88,`Page ${i+1} / ${numPages}…`);
+            const page=await srcPdf.getPage(i+1);
+            const vp=page.getViewport({scale});
+            const c=document.createElement('canvas');
+            c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+            await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+
+            if(i===0) previewDataUrl=c.toDataURL('image/jpeg',quality);
+
+            const jpegDataUrl=c.toDataURL('image/jpeg',quality);
+            const jpegBytes=Uint8Array.from(atob(jpegDataUrl.split(',')[1]),ch=>ch.charCodeAt(0));
+            const jpegImg=await outPdf.embedJpg(jpegBytes);
+            const newPage=outPdf.addPage([vp.width/scale, vp.height/scale]);
+            newPage.drawImage(jpegImg,{x:0,y:0,width:vp.width/scale,height:vp.height/scale});
         }
 
-        document.addEventListener('click', function(event) {
-            const btn = document.getElementById('colorPickerBtn'); const popup = document.getElementById('colorPopup');
-            if (event.target !== btn && !popup.contains(event.target)) popup.classList.add('hidden');
-        });
+        cmpSetProgress(96,'Finalisation…');
+        const outBytes=await outPdf.save();
+        cmpResultBlob=new Blob([outBytes],{type:'application/pdf'});
+        cmpResultName=cmpFile.name.replace(/\.pdf$/i,'_compressé.pdf');
 
-        async function loadPdfIntoEditor() {
-            const fileInput = document.getElementById('editorPdfInput'); if (!fileInput.files.length) return;
-            setStatus('editorStatus', "Chargement du PDF...", 'pending');
-            const file = fileInput.files[0]; editorOriginalFileName = file.name.replace(/\.[^/.]+$/, "");
-            const reader = new FileReader();
+        // Ratio
+        const ratio=(1-outBytes.byteLength/cmpFile.size)*100;
+        document.getElementById('cmpBeforeSize').textContent=cmpFmtSize(cmpFile.size);
+        document.getElementById('cmpAfterSize').textContent=cmpFmtSize(outBytes.byteLength);
+        const ratioEl=document.getElementById('cmpRatio');
+        ratioEl.textContent=(ratio>=0?'−':'+')+(Math.abs(ratio).toFixed(1))+'%';
+        ratioEl.style.color=ratio>=0?'#34d399':'#f87171';
 
-            reader.onload = async function(e) {
-                try {
-                    const typedarray = new Uint8Array(e.target.result);
-                    const pdf = await pdfjsLib.getDocument({data: typedarray}).promise;
-                    const page = await pdf.getPage(1); const viewport = page.getViewport({scale: 1.5}); 
+        if(previewDataUrl) document.getElementById('cmpPreviewImg').src=previewDataUrl;
 
-                    const bgCanvas = document.getElementById('pdfBgCanvas'); const drawCanvas = document.getElementById('pdfDrawCanvas');
-                    pdfWidth = viewport.width; pdfHeight = viewport.height;
-                    bgCanvas.width = drawCanvas.width = viewport.width; bgCanvas.height = drawCanvas.height = viewport.height;
-                    bgCanvas.parentElement.style.width = viewport.width + 'px'; bgCanvas.parentElement.style.height = viewport.height + 'px';
+        cmpSetProgress(100,'Terminé ✓');
+        setTimeout(()=>{cmpShow('cmpProgressWrap',false); cmpShow('cmpResult',true);},350);
 
-                    await page.render({ canvasContext: bgCanvas.getContext('2d'), viewport: viewport }).promise;
-                    drawCanvas.getContext('2d').clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-                    
-                    undoStack = []; redoStack = []; updateUndoRedoUI();
-                    cancelTextOverlay();
+    }catch(err){
+        console.error(err);
+        document.getElementById('cmpProgressBar').style.background='#ef4444';
+        cmpSetProgress(0,'Erreur — voir la console');
+    }finally{
+        document.getElementById('cmpRunBtn').classList.remove('opacity-50','pointer-events-none');
+    }
+}
 
-                    document.getElementById('editorToolbar').classList.remove('opacity-50', 'pointer-events-none');
-                    document.getElementById('btn-export-pdf').classList.remove('opacity-50', 'pointer-events-none');
-                    
-                    currentZoom = 1; translateX = 0; translateY = 0;
-                    document.getElementById('zoomWrapper').style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
-
-                    setStatus('editorStatus', "PDF prêt. Naviguez avec la molette (zoom) et clic molette (déplacer).", 'success');
-                    initDrawingEvents(drawCanvas, drawCanvas.getContext('2d')); initPanZoomEvents();
-                } catch (error) { setStatus('editorStatus', "Erreur lors de la lecture du PDF.", 'error'); }
-            }; reader.readAsArrayBuffer(file);
-        }
-
-        function initDrawingEvents(canvas, ctx) {
-            canvas.onmousedown = null; canvas.onmousemove = null; canvas.onmouseup = null; canvas.onmouseout = null;
-            const getPos = (e) => { const rect = canvas.getBoundingClientRect(); return { x: (e.clientX - rect.left) / currentZoom, y: (e.clientY - rect.top) / currentZoom }; };
-
-            canvas.onmousedown = (e) => {
-                if(e.button !== 0) return; 
-                
-                const pos = getPos(e);
-                
-                // Outil TEXTE (Ouverture de l'Overlay)
-                if (currentEditorTool === 'text') {
-                    // Si on clique alors qu'un texte est déjà ouvert, on ne fait rien (on laisse l'utilisateur valider l'ancien)
-                    if (!document.getElementById('floatingTextWrapper').classList.contains('hidden')) return;
-                    openTextOverlay(pos.x, pos.y);
-                    return;
-                }
-                
-                saveState(); 
-
-                // Outil TAMPON
-                if (currentEditorTool === 'stamp') {
-                    if(!stampImageObj) { undoStack.pop(); updateUndoRedoUI(); return setStatus('editorStatus', "Aucune image sélectionnée", 'error'); }
-                    const scale = parseFloat(document.getElementById('stampScale').value);
-                    const drawW = stampImageObj.width * scale; const drawH = stampImageObj.height * scale;
-                    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1.0;
-                    ctx.drawImage(stampImageObj, pos.x - (drawW/2), pos.y - (drawH/2), drawW, drawH);
-                    setStatus('editorStatus', "Tampon appliqué ✓", 'success'); return;
-                }
-                
-                isDrawing = true; [lastX, lastY] = [pos.x, pos.y];
-                if (currentEditorTool === 'line') drawingSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            };
-
-            canvas.onmousemove = (e) => {
-                if (!isDrawing) return; const pos = getPos(e);
-                
-                if (currentEditorTool === 'line') {
-                    ctx.putImageData(drawingSnapshot, 0, 0); ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(pos.x, pos.y);
-                    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1.0; ctx.strokeStyle = currentDrawColor; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
-                    return;
-                }
-
-                ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(pos.x, pos.y);
-                
-                if (currentEditorTool === 'eraser') { ctx.globalCompositeOperation = "destination-out"; ctx.globalAlpha = 1.0; ctx.lineWidth = 30; } 
-                else { ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1.0; ctx.strokeStyle = currentDrawColor; ctx.lineWidth = 3; }
-                
-                ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
-                [lastX, lastY] = [pos.x, pos.y];
-            };
-
-            canvas.onmouseup = () => { if(isDrawing && currentEditorTool === 'line') drawingSnapshot = null; isDrawing = false; };
-            canvas.onmouseout = () => isDrawing = false;
-        }
-
-        let editorPanZoomInit = false;
-        function initPanZoomEvents() {
-            if (editorPanZoomInit) return; editorPanZoomInit = true;
-            const container = document.getElementById('canvasContainer'); const wrapper = document.getElementById('zoomWrapper'); const drawCanvas = document.getElementById('pdfDrawCanvas');
-            const updateTransform = () => wrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
-
-            container.addEventListener('wheel', (e) => {
-                e.preventDefault(); const rect = container.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
-                const targetX = (mouseX - translateX) / currentZoom; const targetY = (mouseY - translateY) / currentZoom;
-                let newZoom = currentZoom + ((e.deltaY < 0 ? 1 : -1) * 0.05); newZoom = Math.min(Math.max(0.5, newZoom), 4); 
-                translateX = mouseX - (targetX * newZoom); translateY = mouseY - (targetY * newZoom); currentZoom = newZoom; updateTransform();
-            }, { passive: false });
-
-            container.addEventListener('mousedown', (e) => {
-                if (e.button === 1) { e.preventDefault(); isPanning = true; panStartX = e.clientX - translateX; panStartY = e.clientY - translateY; container.style.cursor = 'grabbing'; drawCanvas.style.pointerEvents = 'none'; }
-            });
-            window.addEventListener('mousemove', (e) => { if (!isPanning) return; e.preventDefault(); translateX = e.clientX - panStartX; translateY = e.clientY - panStartY; updateTransform(); });
-            window.addEventListener('mouseup', (e) => { if (e.button === 1 && isPanning) { isPanning = false; container.style.cursor = ''; drawCanvas.style.pointerEvents = 'auto'; } });
-        }
-
-        async function exportEditedPdf() {
-            if(pdfWidth === 0) return setStatus('editorStatus', "Aucun PDF chargé", 'error');
-            
-            // Si une boîte de texte est restée ouverte sans être validée, on la valide de force avant l'export
-            if(!document.getElementById('floatingTextWrapper').classList.contains('hidden')) {
-                bakeTextToCanvas();
-            }
-
-            setStatus('editorStatus', "Fusion et exportation...", 'pending');
-            const mCtx = document.createElement('canvas').getContext('2d');
-            mCtx.canvas.width = pdfWidth; mCtx.canvas.height = pdfHeight;
-            mCtx.fillStyle = "#ffffff"; mCtx.fillRect(0, 0, pdfWidth, pdfHeight);
-            mCtx.drawImage(document.getElementById('pdfBgCanvas'), 0, 0); mCtx.drawImage(document.getElementById('pdfDrawCanvas'), 0, 0);
-            const { jsPDF } = window.jspdf; const doc = new jsPDF({ orientation: pdfWidth > pdfHeight ? 'l' : 'p', unit: 'px', format: [pdfWidth, pdfHeight] });
-            doc.addImage(mCtx.canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, pdfHeight); doc.save(`${editorOriginalFileName}_modifié.pdf`);
-            setStatus('editorStatus', "PDF exporté ✓", 'success');
-        }
-
-        // --- 2. CONTRÔLE DE VERSIONS ---
-        let compZoom = 1; let compTx = 0; let compTy = 0; let compIsPanning = false; let compPanSx = 0; let compPanSy = 0;
-        let compLayer1Visible = true; let compLayer2Visible = true;
-        let compAlignMode = false; let compL2Tx = 0; let compL2Ty = 0; let isAligning = false; let alignStartX = 0; let alignStartY = 0;
-
-        async function loadComparePdf(layerNum) {
-            const fileInput = document.getElementById('comparePdf' + layerNum);
-            if (!fileInput.files.length) return;
-            setStatus('compareStatus', `Chargement du calque ${layerNum}...`, 'pending');
-            const file = fileInput.files[0]; const reader = new FileReader();
-
-            reader.onload = async function(e) {
-                try {
-                    const typedarray = new Uint8Array(e.target.result); const pdf = await pdfjsLib.getDocument({data: typedarray}).promise;
-                    const page = await pdf.getPage(1); const viewport = page.getViewport({scale: 1.5}); 
-                    const canvas = document.getElementById('compareCanvas' + layerNum);
-                    canvas.width = viewport.width; canvas.height = viewport.height;
-                    
-                    if(layerNum === 1) {
-                        canvas.parentElement.style.width = viewport.width + 'px'; canvas.parentElement.style.height = viewport.height + 'px';
-                        compZoom = 1; compTx = 0; compTy = 0; document.getElementById('compareZoomWrapper').style.transform = `translate(${compTx}px, ${compTy}px) scale(${compZoom})`;
-                    } else if (layerNum === 2) {
-                        compL2Tx = 0; compL2Ty = 0; document.getElementById('compareCanvas2').style.transform = `translate(${compL2Tx}px, ${compL2Ty}px)`;
-                    }
-
-                    await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-                    setStatus('compareStatus', "Calque prêt. Ajustez la transparence ou zoomez.", 'success');
-                } catch (error) { setStatus('compareStatus', "Erreur de lecture du PDF.", 'error'); }
-            }; reader.readAsArrayBuffer(file);
-        }
-
-        function updateCompareOpacity() {
-            const val = document.getElementById('compareOpacity').value;
-            document.getElementById('compareCanvas2').style.opacity = compLayer2Visible ? val : 0;
-        }
-
-        function toggleCompareLayer(layerNum) {
-            const canvas = document.getElementById('compareCanvas' + layerNum); const btn = document.getElementById('btn-eye-' + layerNum);
-            if (layerNum === 1) { compLayer1Visible = !compLayer1Visible; canvas.style.opacity = compLayer1Visible ? 1 : 0; btn.style.opacity = compLayer1Visible ? 1 : 0.3; } 
-            else { compLayer2Visible = !compLayer2Visible; updateCompareOpacity(); btn.style.opacity = compLayer2Visible ? 1 : 0.3; }
-        }
-
-        function toggleCompareAlign() {
-            compAlignMode = !compAlignMode; const btn = document.getElementById('btn-align-mode'); const container = document.getElementById('compareContainer');
-            if(compAlignMode) {
-                btn.classList.replace('bg-zinc-800', 'bg-amber-600'); btn.classList.replace('text-zinc-400', 'text-white'); container.style.cursor = 'move';
-                setStatus('compareStatus', "Mode Alignement : Cliquez et glissez pour déplacer le document révisé.", 'pending');
-            } else {
-                btn.classList.replace('bg-amber-600', 'bg-zinc-800'); btn.classList.replace('text-white', 'text-zinc-400'); container.style.cursor = '';
-                setStatus('compareStatus', "Alignement terminé. Mode navigation standard actif.", 'success');
-            }
-        }
-
-        let compPanZoomInit = false;
-        function initComparePanZoomEvents() {
-            if (compPanZoomInit) return; compPanZoomInit = true;
-            const container = document.getElementById('compareContainer'); const wrapper = document.getElementById('compareZoomWrapper');
-            const updateTransform = () => wrapper.style.transform = `translate(${compTx}px, ${compTy}px) scale(${compZoom})`;
-
-            container.addEventListener('wheel', (e) => {
-                e.preventDefault(); const rect = container.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
-                const targetX = (mouseX - compTx) / compZoom; const targetY = (mouseY - compTy) / compZoom;
-                let newZoom = compZoom + ((e.deltaY < 0 ? 1 : -1) * 0.05); newZoom = Math.min(Math.max(0.5, newZoom), 4); 
-                compTx = mouseX - (targetX * newZoom); compTy = mouseY - (targetY * newZoom); compZoom = newZoom; updateTransform();
-            }, { passive: false });
-
-            container.addEventListener('mousedown', (e) => {
-                if (compAlignMode && e.button === 0) { e.preventDefault(); isAligning = true; alignStartX = e.clientX - (compL2Tx * compZoom); alignStartY = e.clientY - (compL2Ty * compZoom); } 
-                else if (e.button === 1 || (!compAlignMode && e.button === 0)) { e.preventDefault(); compIsPanning = true; compPanSx = e.clientX - compTx; compPanSy = e.clientY - compTy; container.style.cursor = 'grabbing'; }
-            });
-            window.addEventListener('mousemove', (e) => { 
-                if (isAligning) { e.preventDefault(); compL2Tx = (e.clientX - alignStartX) / compZoom; compL2Ty = (e.clientY - alignStartY) / compZoom; document.getElementById('compareCanvas2').style.transform = `translate(${compL2Tx}px, ${compL2Ty}px)`; } 
-                else if (compIsPanning) { e.preventDefault(); compTx = e.clientX - compPanSx; compTy = e.clientY - compPanSy; updateTransform(); }
-            });
-            window.addEventListener('mouseup', (e) => { if (isAligning) isAligning = false; if (compIsPanning) { compIsPanning = false; container.style.cursor = compAlignMode ? 'move' : ''; } });
-            container.addEventListener('mouseleave', () => { compIsPanning = false; isAligning = false; container.style.cursor = compAlignMode ? 'move' : ''; });
-        }
-
-
-        // --- 3 & 4. CONVERSIONS MÉDIAS / HTML (inchangées) ---
-        async function convertImgToPdf() {
-            const fileInput = document.getElementById('imgInput'); if (!fileInput.files.length) return setStatus('imgStatus', "Sélectionnez une image", 'error');
-            setStatus('imgStatus', "Génération...", 'pending'); const file = fileInput.files[0]; const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image(); img.src = e.target.result;
-                img.onload = function() {
-                    const { jsPDF } = window.jspdf; const doc = new jsPDF({ orientation: img.width > img.height ? 'l' : 'p', unit: 'px', format: [img.width, img.height] });
-                    doc.addImage(img.src, file.type === 'image/png' ? 'PNG' : 'JPEG', 0, 0, img.width, img.height);
-                    doc.save(file.name.replace(/\.[^/.]+$/, "") + ".pdf"); setStatus('imgStatus', "PDF généré ✓", 'success');
-                };
-            }; reader.readAsDataURL(file);
-        }
-
-        async function convertPdfToImg(mimeType) {
-            const fileInput = document.getElementById('pdfInput'); const extension = mimeType === 'image/png' ? '.png' : '.jpg';
-            if (!fileInput.files.length) return setStatus('pdfStatus', "Sélectionnez un PDF", 'error');
-            setStatus('pdfStatus', "Extraction...", 'pending'); const file = fileInput.files[0]; const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const typedarray = new Uint8Array(e.target.result); const pdf = await pdfjsLib.getDocument({data: typedarray}).promise;
-                    const page = await pdf.getPage(1); const viewport = page.getViewport({scale: 2.0});
-                    const canvas = document.createElement('canvas'); canvas.height = viewport.height; canvas.width = viewport.width;
-                    await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-                    canvas.toBlob((blob) => { downloadFile(blob, file.name.replace('.pdf', `_page1${extension}`)); setStatus('pdfStatus', "Image exportée ✓", 'success'); }, mimeType, 0.95);
-                } catch (error) { setStatus('pdfStatus', "Erreur PDF", 'error'); }
-            }; reader.readAsArrayBuffer(file);
-        }
-
-        function convertTxtToHtml() {
-            const fileInput = document.getElementById('txtInput'); const pasteInput = document.getElementById('txtPaste').value;
-            if (!fileInput.files.length && !pasteInput.trim()) return setStatus('txtStatus', "Collez du texte ou sélectionnez un fichier", 'error');
-            setStatus('txtStatus', "Traitement...", 'pending');
-            const processHtmlConversion = (text, defaultFilename) => {
-                let htmlContent = ""; if (text.trim().toLowerCase().startsWith("<!doctype html>") || text.trim().toLowerCase().startsWith("<html")) { htmlContent = text; } 
-                else { htmlContent = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${defaultFilename} - Converti</title><style>body { font-family: sans-serif; line-height: 1.6; padding: 2rem; max-width: 800px; margin: auto; background: #fff; color: #333; }</style></head><body>${text.replace(/\n/g, "<br>\n")}</body></html>`; }
-                downloadFile(new Blob([htmlContent], { type: 'text/html' }), defaultFilename); setStatus('txtStatus', "Conversion réussie ✓", 'success');
-            };
-            if (pasteInput.trim()) processHtmlConversion(pasteInput, 'texte_converti.html'); 
-            else { const file = fileInput.files[0]; const reader = new FileReader(); reader.onload = function(e) { processHtmlConversion(e.target.result, file.name.replace('.txt', '.html')); }; reader.readAsText(file); }
-        }
-
-        // --- 5. TXT TO JSON ---
-        function convertTxtToJson() {
-            const fileInput = document.getElementById('jsonInput'); 
-            const pasteInput = document.getElementById('jsonPaste').value;
-            
-            if (!fileInput.files.length && !pasteInput.trim()) {
-                return setStatus('jsonStatus', "Collez du texte ou sélectionnez un fichier", 'error');
-            }
-            
-            setStatus('jsonStatus', "Analyse et traitement...", 'pending');
-            
-            const processJsonConversion = (text, defaultFilename) => {
-                let finalObject;
-                let message = "Conversion réussie ✓";
-                
-                // 1. Tenter de parser si c'est déjà du JSON valide
-                try {
-                    finalObject = JSON.parse(text);
-                    message = "JSON validé et formaté ✓";
-                } catch (e) {
-                    // 2. Si ce n'est pas du JSON, on analyse le contenu
-                    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    
-                    if (lines.length === 0) {
-                        return setStatus('jsonStatus', "Le texte est vide", 'error');
-                    }
-
-                    // Détection de format "Clé: Valeur" ou "Clé=Valeur"
-                    const keyValueRegex = /^([^:=]+)[:=](.*)$/;
-                    let isKeyValueFormat = true;
-                    let kvObject = {};
-
-                    for (let line of lines) {
-                        const match = line.match(keyValueRegex);
-                        if (match) {
-                            kvObject[match[1].trim()] = match[2].trim();
-                        } else {
-                            isKeyValueFormat = false;
-                            break;
-                        }
-                    }
-
-                    if (isKeyValueFormat && Object.keys(kvObject).length > 0) {
-                        // 2a. C'est une liste de clés/valeurs
-                        finalObject = kvObject;
-                        message = "Paires Clé/Valeur détectées et converties ✓";
-                    } else {
-                        // 2b. Texte brut standard : on crée un tableau de lignes
-                        finalObject = {
-                            document_type: "text_lines",
-                            line_count: lines.length,
-                            content: lines
-                        };
-                        message = "Texte brut converti en tableau JSON ✓";
-                    }
-                }
-                
-                // Créer le fichier JSON formaté (beautify avec 4 espaces)
-                const jsonString = JSON.stringify(finalObject, null, 4);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                
-                const finalFilename = defaultFilename.replace(/\.[^/.]+$/, "") + ".json";
-                downloadFile(blob, finalFilename);
-                setStatus('jsonStatus', message, 'success');
-            };
-
-            if (pasteInput.trim()) { processJsonConversion(pasteInput, 'donnees_converties.json'); } 
-            else { const file = fileInput.files[0]; const reader = new FileReader(); reader.onload = function(e) { processJsonConversion(e.target.result, file.name); }; reader.readAsText(file); }
-        }
-
-        // --- 6. FUSION DE PDF ---
-        function updateMergeList() {
-            const input = document.getElementById('mergeInput');
-            const listDiv = document.getElementById('mergeList');
-            
-            if (input.files.length === 0) {
-                listDiv.classList.add('hidden');
-                listDiv.innerHTML = '';
-                return;
-            }
-            
-            listDiv.classList.remove('hidden');
-            let listHtml = '<span class="text-amber-500 font-bold mb-1 uppercase tracking-widest">Ordre de fusion :</span>';
-            
-            for (let i = 0; i < input.files.length; i++) {
-                listHtml += `<div>${i + 1}. ${input.files[i].name}</div>`;
-            }
-            
-            listDiv.innerHTML = listHtml;
-            setStatus('mergeStatus', `${input.files.length} fichier(s) prêt(s)`, 'pending');
-        }
-
-        async function mergePdfs() {
-            const input = document.getElementById('mergeInput');
-            if (input.files.length < 2) {
-                return setStatus('mergeStatus', "Sélectionnez au moins 2 PDF à fusionner.", 'error');
-            }
-
-            setStatus('mergeStatus', "Fusion en cours...", 'pending');
-
-            try {
-                // Utilisation de la librairie pdf-lib
-                const { PDFDocument } = window.PDFLib;
-                const mergedPdf = await PDFDocument.create();
-
-                // Parcourir chaque fichier sélectionné
-                for (let file of input.files) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await PDFDocument.load(arrayBuffer);
-                    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-                    copiedPages.forEach((page) => mergedPdf.addPage(page));
-                }
-
-                // Sauvegarder le nouveau PDF
-                const mergedPdfFile = await mergedPdf.save();
-                
-                // Créer le lien de téléchargement
-                const blob = new Blob([mergedPdfFile], { type: 'application/pdf' });
-                downloadFile(blob, `MOMO_Fusion_${new Date().getTime()}.pdf`);
-                
-                setStatus('mergeStatus', "Fusion réussie et document exporté ✓", 'success');
-
-            } catch (error) {
-                console.error(error);
-                setStatus('mergeStatus', "Erreur lors de la fusion des documents.", 'error');
-            }
-        }
-    </script>
+function cmpDownload(){if(cmpResultBlob)downloadFile(cmpResultBlob,cmpResultName);}
+</script>
 </body>
 </html>
