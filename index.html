@@ -40,13 +40,22 @@
         .tab-btn.tab-active{background:#27272a;color:#fff;border-color:rgba(245,158,11,.5);box-shadow:0 0 10px rgba(245,158,11,.15)}
         .tab-btn svg{width:16px;height:16px;color:#f59e0b}
 
+        /* ── ZONE D'IMPORT UNIFIÉE (tous les outils) ── */
+        .dz{border:2px dashed #3f3f46;border-radius:14px;padding:26px 22px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px}
+        .dz:hover,.dz.dz-drag{border-color:#f59e0b;background:rgba(245,158,11,.05)}
+        .dz-ico{width:42px;height:42px;color:#52525b;transition:color .2s;flex-shrink:0}
+        .dz:hover .dz-ico,.dz.dz-drag .dz-ico{color:#f59e0b}
+        .dz-title{font-size:13px;font-weight:700;color:#d4d4d8}
+        .dz-title b{color:#f59e0b;font-weight:700}
+        .dz-sub{font-size:10px;color:#52525b;text-transform:uppercase;letter-spacing:.08em}
+        .dz-pill{display:inline-flex;align-items:center;gap:8px;background:#18181b;border:1px solid #3f3f46;border-radius:10px;padding:8px 14px;font-size:12px;color:#e4e4e7;font-weight:600;max-width:100%}
+        .dz-pill .dz-ext{background:#f59e0b;color:#000;border-radius:5px;padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.05em;flex-shrink:0}
+        .dz-pill .dz-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .dz-change{font-size:10px;color:#71717a;border:1px solid #27272a;border-radius:7px;padding:4px 10px;transition:color .15s,border-color .15s;cursor:pointer;background:none}
+        .dz-change:hover{color:#f87171;border-color:#7f1d1d}
+
         /* ── CONVERTISSEUR UNIVERSEL ── */
-        #convDropZone{
-            border:2px dashed #3f3f46;border-radius:14px;padding:32px 24px;text-align:center;
-            transition:border-color .25s,background .25s;cursor:pointer;
-        }
-        #convDropZone:hover,#convDropZone.drag-active{border-color:#f59e0b;background:rgba(245,158,11,.04)}
-        #convDropZone.has-file{border-color:#3f3f46;padding:18px 20px;cursor:default;background:transparent}
+        #convDropZone.has-file{padding:18px 20px;cursor:default}
 
         #convFilePill{
             display:inline-flex;align-items:center;gap:8px;
@@ -102,6 +111,7 @@
 
         /* ── FUSION PDF ── */
         #mergePageGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;min-height:80px}
+        #mergePageGrid.hidden{display:none}
         .merge-page-card{position:relative;background:#18181b;border:2px solid #3f3f46;border-radius:10px;overflow:hidden;cursor:grab;transition:border-color .2s,transform .2s,box-shadow .2s;user-select:none}
         .merge-page-card:active{cursor:grabbing}
         .merge-page-card:hover{border-color:#f59e0b;box-shadow:0 0 16px rgba(245,158,11,.2)}
@@ -112,8 +122,6 @@
         .merge-page-delete{position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(239,68,68,.85);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;opacity:0;transition:opacity .15s;z-index:10;border:none}
         .merge-page-card:hover .merge-page-delete{opacity:1}
         .merge-page-num{position:absolute;top:4px;left:4px;background:rgba(0,0,0,.7);color:#f59e0b;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;pointer-events:none;font-family:monospace}
-        #mergeDropZone{border:2px dashed #3f3f46;border-radius:12px;padding:32px;text-align:center;transition:border-color .2s,background .2s;cursor:pointer}
-        #mergeDropZone.drag-active{border-color:#f59e0b;background:rgba(245,158,11,.05)}
         @keyframes cardIn{from{opacity:0;transform:scale(.85) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
         .merge-page-card{animation:cardIn .25s ease both}
         /* ── COMPRESSION PDF ── */
@@ -173,15 +181,17 @@
         </button>
         <div id="sec-editor" class="section-body"><div class="section-inner"><div class="flex flex-col">
 
-            <!-- ── Barre 1 : import / outils / export ── -->
-            <div class="flex flex-wrap items-center gap-2 px-4 py-3 bg-zinc-900/70 border-b border-zinc-800">
+            <!-- ── Barre 1 : import / outils / export (apparaît après import) ── -->
+            <!-- Input toujours présent (jamais dans un conteneur masqué) -->
+            <input type="file" id="editorPdfInput" accept=".pdf" class="hidden" onchange="loadPdfIntoEditor()">
+
+            <div id="editorToolbarBar" class="hidden flex-wrap items-center gap-2 px-4 py-3 bg-zinc-900/70 border-b border-zinc-800">
 
                 <!-- Import -->
-                <label class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-bold text-white cursor-pointer transition-colors flex-shrink-0">
+                <button onclick="document.getElementById('editorPdfInput').click()" class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-bold text-white cursor-pointer transition-colors flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 12l-4-4m0 0l-4 4m4-4v12"/></svg>
                     <span id="editorFileLabel">Charger un PDF</span>
-                    <input type="file" id="editorPdfInput" accept=".pdf" class="hidden" onchange="loadPdfIntoEditor()">
-                </label>
+                </button>
 
                 <div class="h-5 w-px bg-zinc-700 mx-1"></div>
 
@@ -325,8 +335,18 @@
                 </button>
             </div>
 
-            <!-- ── Canvas ── -->
-            <div class="p-3">
+            <!-- ── État vide : uniquement le cadre d'import ── -->
+            <div id="editorEmpty" class="p-6">
+                <div id="editorDropZone" class="dz" onclick="document.getElementById('editorPdfInput').click()"
+                    ondragover="editorOnDragOver(event)" ondragleave="editorOnDragLeave()" ondrop="editorOnDrop(event)">
+                    <svg class="dz-ico" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                    <p class="dz-title">Glissez un PDF ici <b>ou cliquez</b></p>
+                    <p class="dz-sub">Format PDF</p>
+                </div>
+            </div>
+
+            <!-- ── Canvas (apparaît après import) ── -->
+            <div id="editorCanvasWrap" class="hidden p-3">
                 <div id="canvasContainer" class="relative overflow-hidden border border-zinc-800 rounded-xl bg-zinc-900/50 h-[600px] flex justify-center items-start select-none">
                     <div id="zoomWrapper" class="relative shadow-2xl origin-top-left" style="transition:transform 75ms">
                         <canvas id="pdfBgCanvas" class="absolute top-0 left-0"></canvas>
@@ -363,21 +383,21 @@
         <div id="sec-conv" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-6">
 
             <!-- Zone de dépôt -->
-            <div id="convDropZone" onclick="convTriggerInput()" ondragover="convOnDragOver(event)" ondragleave="convOnDragLeave()" ondrop="convOnDrop(event)">
+            <div id="convDropZone" class="dz" onclick="convTriggerInput()" ondragover="convOnDragOver(event)" ondragleave="convOnDragLeave()" ondrop="convOnDrop(event)">
                 <input type="file" id="convFileInput" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp" onchange="convHandleFile(this.files[0])">
                 <!-- État vide -->
-                <div id="convEmptyState" class="flex flex-col items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                    <p class="text-sm font-bold text-zinc-400">Déposez ou cliquez pour choisir un fichier</p>
-                    <p class="text-[10px] text-zinc-600 uppercase tracking-widest">PDF · JPG · PNG · WEBP</p>
+                <div id="convEmptyState" class="flex flex-col items-center gap-2">
+                    <svg class="dz-ico" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                    <p class="dz-title">Glissez un fichier ici <b>ou cliquez</b></p>
+                    <p class="dz-sub">PDF · JPG · PNG · WEBP</p>
                 </div>
                 <!-- État fichier chargé -->
-                <div id="convLoadedState" class="hidden items-center justify-center">
-                    <div id="convFilePill">
-                        <span class="pill-ext" id="convPillExt">PDF</span>
-                        <span class="pill-name" id="convPillName">fichier.pdf</span>
-                        <button class="pill-clear" onclick="convClearFile(event)" title="Changer">✕</button>
+                <div id="convLoadedState" class="hidden items-center justify-center gap-3 flex-wrap">
+                    <div class="dz-pill">
+                        <span class="dz-ext" id="convPillExt">PDF</span>
+                        <span class="dz-name" id="convPillName">fichier.pdf</span>
                     </div>
+                    <button class="dz-change" onclick="convClearFile(event)">Changer de fichier</button>
                 </div>
             </div>
 
@@ -408,11 +428,11 @@
             <svg id="chev-merge" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </button>
         <div id="sec-merge" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-5">
-            <div id="mergeDropZone" onclick="document.getElementById('mergeFileInput').click()" class="flex flex-col items-center gap-3">
+            <div id="mergeDropZone" class="dz" onclick="document.getElementById('mergeFileInput').click()">
                 <input type="file" id="mergeFileInput" multiple accept=".pdf" class="hidden" onchange="addMergeFiles(event)">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                <p class="text-xs text-zinc-500 font-bold">Cliquez pour ajouter des PDF</p>
-                <p class="text-[10px] text-zinc-600">Plusieurs fichiers possibles · Pages apparaissent ci-dessous</p>
+                <svg class="dz-ico" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <p class="dz-title">Glissez vos PDF ici <b>ou cliquez</b></p>
+                <p class="dz-sub">Plusieurs fichiers · réorganisables ci-dessous</p>
             </div>
             <div id="mergeToolbar" class="hidden items-center justify-between gap-4 flex-wrap">
                 <span id="mergePagesCount" class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold"></span>
@@ -430,7 +450,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Exporter le PDF assemblé
             </button>
-            <p id="mergeStatus" class="text-[10px] text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
+            <p id="mergeStatus" class="hidden text-[10px] text-center text-zinc-500 uppercase tracking-widest font-bold h-4"></p>
         </div></div></div>
     </div>
 
@@ -448,19 +468,20 @@
         <div id="sec-compress" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-5">
 
             <!-- Zone de dépôt -->
-            <div id="cmpDropZone" onclick="cmpTriggerInput()" ondragover="cmpOnDragOver(event)" ondragleave="cmpOnDragLeave()" ondrop="cmpOnDrop(event)" class="border-2 border-dashed border-zinc-700 rounded-xl p-7 text-center cursor-pointer transition-all hover:border-amber-500/60 hover:bg-amber-500/[0.03]">
+            <div id="cmpDropZone" class="dz" onclick="cmpTriggerInput()" ondragover="cmpOnDragOver(event)" ondragleave="cmpOnDragLeave()" ondrop="cmpOnDrop(event)">
                 <input type="file" id="cmpFileInput" accept=".pdf" class="hidden" onchange="cmpHandleFile(this.files[0])">
-                <div id="cmpEmptyState" class="flex flex-col items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    <p class="text-sm font-bold text-zinc-400">Déposez un PDF ou cliquez pour choisir</p>
+                <div id="cmpEmptyState" class="flex flex-col items-center gap-2">
+                    <svg class="dz-ico" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                    <p class="dz-title">Glissez un PDF ici <b>ou cliquez</b></p>
+                    <p class="dz-sub">Format PDF</p>
                 </div>
-                <div id="cmpLoadedState" class="hidden items-center justify-between gap-4 flex-wrap">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <span class="bg-amber-500 text-black text-[9px] font-bold px-2 py-1 rounded-md flex-shrink-0">PDF</span>
-                        <span id="cmpFileName" class="text-sm font-bold text-zinc-200 truncate"></span>
-                        <span id="cmpOrigSize" class="text-[10px] text-zinc-500 flex-shrink-0"></span>
+                <div id="cmpLoadedState" class="hidden items-center justify-center gap-3 flex-wrap">
+                    <div class="dz-pill">
+                        <span class="dz-ext">PDF</span>
+                        <span class="dz-name" id="cmpFileName"></span>
+                        <span id="cmpOrigSize" class="text-[10px] text-zinc-500 flex-shrink-0 font-normal"></span>
                     </div>
-                    <button onclick="cmpClearFile(event)" class="text-zinc-600 hover:text-red-400 transition-colors text-xs flex-shrink-0 border border-zinc-800 rounded-lg px-3 py-1.5 hover:border-red-800">Changer</button>
+                    <button onclick="cmpClearFile(event)" class="dz-change">Changer de fichier</button>
                 </div>
             </div>
 
@@ -578,60 +599,56 @@
         </button>
         <div id="sec-wm" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-5">
 
-            <!-- Champ texte du filigrane — toujours visible en premier -->
-            <div class="flex flex-col gap-2">
-                <label class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Texte du filigrane</label>
-                <input id="wmText" type="text" placeholder="CONFIDENTIEL, BROUILLON, NOM…"
-                    class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm font-bold text-zinc-100 placeholder-zinc-600 outline-none focus:border-amber-500/60 transition-colors"
-                    oninput="wmOnTextChange()">
-            </div>
-
-            <!-- Options : opacité + couleur -->
-            <div class="flex flex-wrap gap-4 items-center">
-
-                <!-- Opacité -->
-                <div class="flex items-center gap-3 flex-1 min-w-[160px]">
-                    <span class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex-shrink-0">Opacité</span>
-                    <input type="range" id="wmOpacity" min="5" max="60" value="18" step="1"
-                        class="flex-1 accent-amber-500" oninput="wmPreview()">
-                    <span id="wmOpacityVal" class="text-xs font-bold text-amber-500 w-8 text-right font-mono">18%</span>
+            <!-- Cadre d'import (seul élément visible tant qu'aucun PDF) -->
+            <div id="wmDropZone" class="dz" onclick="wmTriggerInput()" ondragover="wmOnDragOver(event)" ondragleave="wmOnDragLeave()" ondrop="wmOnDrop(event)">
+                <input type="file" id="wmFileInput" accept=".pdf" class="hidden" onchange="wmHandleFile(this.files[0])">
+                <div id="wmEmptyState" class="flex flex-col items-center gap-2">
+                    <svg class="dz-ico" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                    <p class="dz-title">Glissez un PDF ici <b>ou cliquez</b></p>
+                    <p class="dz-sub">Format PDF</p>
                 </div>
-
-                <!-- Couleur -->
-                <div class="flex items-center gap-2 flex-shrink-0">
-                    <span class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Couleur</span>
-                    <div class="flex gap-1.5">
-                        <button onclick="wmSetColor('#a1a1aa','gris')"  id="wmcol-grey"  class="wm-col-btn w-6 h-6 rounded-full bg-zinc-400 border-2 border-amber-500 transition-all" title="Gris"></button>
-                        <button onclick="wmSetColor('#000000','noir')"  id="wmcol-black" class="wm-col-btn w-6 h-6 rounded-full bg-black border-2 border-zinc-600 transition-all" title="Noir"></button>
-                        <button onclick="wmSetColor('#ef4444','rouge')" id="wmcol-red"   class="wm-col-btn w-6 h-6 rounded-full bg-red-500 border-2 border-zinc-600 transition-all" title="Rouge"></button>
-                        <button onclick="wmSetColor('#3b82f6','bleu')"  id="wmcol-blue"  class="wm-col-btn w-6 h-6 rounded-full bg-blue-500 border-2 border-zinc-600 transition-all" title="Bleu"></button>
+                <div id="wmLoadedState" class="hidden flex-col items-center gap-2">
+                    <div class="dz-pill">
+                        <span class="dz-ext">PDF</span>
+                        <span class="dz-name" id="wmFileName" style="max-width:220px"></span>
                     </div>
+                    <span id="wmPageCount" class="text-[9px] text-zinc-500"></span>
+                    <button onclick="wmClearFile(event)" class="dz-change">Changer de fichier</button>
                 </div>
             </div>
 
-            <!-- Zone de dépôt + aperçu côte à côte -->
-            <div class="flex flex-col md:flex-row gap-4">
+            <!-- Interface du filigrane (apparaît après import) -->
+            <div id="wmControls" class="hidden flex-col gap-5">
 
-                <!-- Drop zone -->
-                <div id="wmDropZone" onclick="wmTriggerInput()" ondragover="wmOnDragOver(event)" ondragleave="wmOnDragLeave()" ondrop="wmOnDrop(event)"
-                    class="flex-1 border-2 border-dashed border-zinc-700 rounded-xl p-6 text-center cursor-pointer transition-all hover:border-amber-500/60 hover:bg-amber-500/[0.02] flex flex-col items-center justify-center gap-3 min-h-[120px]">
-                    <input type="file" id="wmFileInput" accept=".pdf" class="hidden" onchange="wmHandleFile(this.files[0])">
-                    <div id="wmEmptyState" class="flex flex-col items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        <p class="text-xs font-bold text-zinc-500">Déposez un PDF ou cliquez</p>
+                <!-- Champ texte -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Texte du filigrane</label>
+                    <input id="wmText" type="text" placeholder="CONFIDENTIEL, BROUILLON, NOM…"
+                        class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm font-bold text-zinc-100 placeholder-zinc-600 outline-none focus:border-amber-500/60 transition-colors"
+                        oninput="wmOnTextChange()">
+                </div>
+
+                <!-- Options : opacité + couleur -->
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div class="flex items-center gap-3 flex-1 min-w-[160px]">
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex-shrink-0">Opacité</span>
+                        <input type="range" id="wmOpacity" min="5" max="60" value="18" step="1"
+                            class="flex-1 accent-amber-500" oninput="wmPreview()">
+                        <span id="wmOpacityVal" class="text-xs font-bold text-amber-500 w-8 text-right font-mono">18%</span>
                     </div>
-                    <div id="wmLoadedState" class="hidden flex-col items-center gap-2">
-                        <div class="flex items-center gap-2">
-                            <span class="bg-amber-500 text-black text-[9px] font-bold px-2 py-0.5 rounded">PDF</span>
-                            <span id="wmFileName" class="text-xs font-bold text-zinc-200 truncate max-w-[160px]"></span>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Couleur</span>
+                        <div class="flex gap-1.5">
+                            <button onclick="wmSetColor('#a1a1aa','gris')"  id="wmcol-grey"  class="wm-col-btn w-6 h-6 rounded-full bg-zinc-400 border-2 border-amber-500 transition-all" title="Gris"></button>
+                            <button onclick="wmSetColor('#000000','noir')"  id="wmcol-black" class="wm-col-btn w-6 h-6 rounded-full bg-black border-2 border-zinc-600 transition-all" title="Noir"></button>
+                            <button onclick="wmSetColor('#ef4444','rouge')" id="wmcol-red"   class="wm-col-btn w-6 h-6 rounded-full bg-red-500 border-2 border-zinc-600 transition-all" title="Rouge"></button>
+                            <button onclick="wmSetColor('#3b82f6','bleu')"  id="wmcol-blue"  class="wm-col-btn w-6 h-6 rounded-full bg-blue-500 border-2 border-zinc-600 transition-all" title="Bleu"></button>
                         </div>
-                        <span id="wmPageCount" class="text-[9px] text-zinc-500"></span>
-                        <button onclick="wmClearFile(event)" class="text-[9px] text-zinc-600 hover:text-red-400 border border-zinc-800 rounded px-2 py-0.5 transition-colors">Changer</button>
                     </div>
                 </div>
 
-                <!-- Aperçu canvas -->
-                <div class="flex-1 flex flex-col gap-2 min-w-0">
+                <!-- Aperçu -->
+                <div class="flex flex-col gap-2 min-w-0">
                     <span class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Aperçu — 1ère page</span>
                     <div class="relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900/50" style="min-height:140px">
                         <canvas id="wmPreviewCanvas" class="w-full h-auto block"></canvas>
@@ -641,24 +658,24 @@
                     </div>
                 </div>
 
-            </div>
+                <!-- Bouton appliquer -->
+                <button id="wmRunBtn" onclick="wmRun()"
+                    class="btn-action w-full max-w-xs mx-auto bg-zinc-700 text-zinc-400 border border-zinc-600 pointer-events-none opacity-50 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                    <span id="wmRunLabel">Texte requis</span>
+                </button>
 
-            <!-- Bouton appliquer -->
-            <button id="wmRunBtn" onclick="wmRun()"
-                class="btn-action w-full max-w-xs mx-auto bg-zinc-700 text-zinc-400 border border-zinc-600 pointer-events-none opacity-50 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                <span id="wmRunLabel">PDF + texte requis</span>
-            </button>
+                <!-- Progression -->
+                <div id="wmProgressWrap" class="hidden flex-col gap-2">
+                    <div class="flex justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                        <span id="wmProgressLabel">Traitement…</span>
+                        <span id="wmProgressPct">0%</span>
+                    </div>
+                    <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div id="wmProgressBar" class="h-full bg-amber-500 rounded-full transition-all duration-150" style="width:0%"></div>
+                    </div>
+                </div>
 
-            <!-- Progression -->
-            <div id="wmProgressWrap" class="hidden flex-col gap-2">
-                <div class="flex justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                    <span id="wmProgressLabel">Traitement…</span>
-                    <span id="wmProgressPct">0%</span>
-                </div>
-                <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                    <div id="wmProgressBar" class="h-full bg-amber-500 rounded-full transition-all duration-150" style="width:0%"></div>
-                </div>
             </div>
 
         </div></div></div>
@@ -678,19 +695,19 @@
         <div id="sec-redact" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-5">
 
             <!-- Drop zone -->
-            <div id="rdDropZone" onclick="rdTriggerInput()" ondragover="rdOnDragOver(event)" ondragleave="rdOnDragLeave()" ondrop="rdOnDrop(event)"
-                class="border-2 border-dashed border-zinc-700 rounded-xl p-6 text-center cursor-pointer transition-all hover:border-amber-500/60 hover:bg-amber-500/[0.02] flex flex-col items-center justify-center gap-3 min-h-[110px]">
+            <div id="rdDropZone" class="dz" onclick="rdTriggerInput()" ondragover="rdOnDragOver(event)" ondragleave="rdOnDragLeave()" ondrop="rdOnDrop(event)">
                 <input type="file" id="rdFileInput" accept=".pdf" class="hidden" onchange="rdHandleFile(this.files[0])">
                 <div id="rdEmptyState" class="flex flex-col items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    <p class="text-xs font-bold text-zinc-500">Déposez un PDF ou cliquez</p>
+                    <svg class="dz-ico" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                    <p class="dz-title">Glissez un PDF ici <b>ou cliquez</b></p>
+                    <p class="dz-sub">Format PDF</p>
                 </div>
                 <div id="rdLoadedState" class="hidden flex-col items-center gap-2">
-                    <div class="flex items-center gap-2">
-                        <span class="bg-amber-500 text-black text-[9px] font-bold px-2 py-0.5 rounded">PDF</span>
-                        <span id="rdFileName" class="text-xs font-bold text-zinc-200 truncate max-w-[200px]"></span>
+                    <div class="dz-pill">
+                        <span class="dz-ext">PDF</span>
+                        <span class="dz-name" id="rdFileName" style="max-width:220px"></span>
                     </div>
-                    <button onclick="rdClearFile(event)" class="text-[9px] text-zinc-600 hover:text-red-400 border border-zinc-800 rounded px-2 py-0.5 transition-colors">Changer de fichier</button>
+                    <button onclick="rdClearFile(event)" class="dz-change">Changer de fichier</button>
                 </div>
             </div>
 
@@ -731,12 +748,15 @@
             </div>
 
             <!-- Bouton recompiler -->
-            <button id="rdRunBtn" onclick="rdRun()"
-                class="btn-action w-full max-w-xs mx-auto bg-zinc-700 text-zinc-400 border border-zinc-600 pointer-events-none opacity-50 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                <span id="rdRunLabel">PDF + 1 masque requis</span>
-            </button>
-            <p class="text-[9px] text-center text-zinc-600 -mt-2">Les pages caviardées sont aplaties en image : le contenu sous les masques noirs est définitivement supprimé.</p>
+            <!-- Actions (apparaissent après import) -->
+            <div id="rdActions" class="hidden flex-col gap-2">
+                <button id="rdRunBtn" onclick="rdRun()"
+                    class="btn-action w-full max-w-xs mx-auto bg-zinc-700 text-zinc-400 border border-zinc-600 pointer-events-none opacity-50 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    <span id="rdRunLabel">Posez au moins 1 masque</span>
+                </button>
+                <p class="text-[9px] text-center text-zinc-600">Les pages caviardées sont aplaties en image : le contenu sous les masques noirs est définitivement supprimé.</p>
+            </div>
 
             <!-- Progression -->
             <div id="rdProgressWrap" class="hidden flex-col gap-2">
@@ -1036,10 +1056,26 @@ function setEditorStatus(msg,type){
 }
 
 // ── Chargement PDF ──
-async function loadPdfIntoEditor(){
-    const fi=document.getElementById('editorPdfInput');if(!fi.files.length)return;
+function loadPdfIntoEditor(){
+    const fi=document.getElementById('editorPdfInput');
+    if(!fi.files.length)return;
+    editorLoadFile(fi.files[0]);
+}
+// Glisser-déposer dans l'éditeur (même système que les autres outils)
+function editorOnDragOver(e){e.preventDefault();document.getElementById('editorDropZone').classList.add('dz-drag');}
+function editorOnDragLeave(){document.getElementById('editorDropZone').classList.remove('dz-drag');}
+function editorOnDrop(e){
+    e.preventDefault();
+    document.getElementById('editorDropZone').classList.remove('dz-drag');
+    const f=e.dataTransfer.files[0];
+    if(f)editorLoadFile(f);
+}
+
+async function editorLoadFile(file){
+    if(!file)return;
+    if(file.type!=='application/pdf' && !/\.pdf$/i.test(file.name)){setEditorStatus('Seuls les PDF sont acceptés.','error');return;}
     setEditorStatus('Chargement…','pending');
-    const file=fi.files[0];editorOriginalFileName=file.name.replace(/\.[^/.]+$/,'');
+    editorOriginalFileName=file.name.replace(/\.[^/.]+$/,'');
     document.getElementById('editorFileLabel').textContent=file.name.length>22?file.name.slice(0,19)+'…':file.name;
     const reader=new FileReader();
     reader.onload=async e=>{
@@ -1056,6 +1092,11 @@ async function loadPdfIntoEditor(){
             undoStack=[];redoStack=[];updateUndoRedoUI();tbCancel();
             document.getElementById('editorToolbar').classList.remove('opacity-40','pointer-events-none');
             document.getElementById('btn-export-pdf').classList.remove('opacity-40','pointer-events-none');
+            // Affiche l'interface (barre d'outils + canvas), masque le cadre d'import
+            document.getElementById('editorToolbarBar').classList.remove('hidden');
+            document.getElementById('editorToolbarBar').classList.add('flex');
+            document.getElementById('editorEmpty').classList.add('hidden');
+            document.getElementById('editorCanvasWrap').classList.remove('hidden');
             currentZoom=1;translateX=0;translateY=0;
             document.getElementById('zoomWrapper').style.transform='translate(0px,0px) scale(1)';
             setEditorStatus('PDF prêt','success');
@@ -1185,9 +1226,9 @@ const CONV_TABLE={
 let convCurrentFile=null;
 
 function convTriggerInput(){if(!convCurrentFile)document.getElementById('convFileInput').click();}
-function convOnDragOver(e){e.preventDefault();document.getElementById('convDropZone').classList.add('drag-active');}
-function convOnDragLeave(){document.getElementById('convDropZone').classList.remove('drag-active');}
-function convOnDrop(e){e.preventDefault();document.getElementById('convDropZone').classList.remove('drag-active');const f=e.dataTransfer.files[0];if(f)convHandleFile(f);}
+function convOnDragOver(e){e.preventDefault();document.getElementById('convDropZone').classList.add('dz-drag');}
+function convOnDragLeave(){document.getElementById('convDropZone').classList.remove('dz-drag');}
+function convOnDrop(e){e.preventDefault();document.getElementById('convDropZone').classList.remove('dz-drag');const f=e.dataTransfer.files[0];if(f)convHandleFile(f);}
 
 function convHandleFile(file){
     if(!file)return;
@@ -1379,10 +1420,10 @@ async function exportMergedPdf(){
 }
 
 const mDZ=document.getElementById('mergeDropZone');
-mDZ.addEventListener('dragover',e=>{e.preventDefault();mDZ.classList.add('drag-active');});
-mDZ.addEventListener('dragleave',()=>mDZ.classList.remove('drag-active'));
+mDZ.addEventListener('dragover',e=>{e.preventDefault();mDZ.classList.add('dz-drag');});
+mDZ.addEventListener('dragleave',()=>mDZ.classList.remove('dz-drag'));
 mDZ.addEventListener('drop',async e=>{
-    e.preventDefault();mDZ.classList.remove('drag-active');
+    e.preventDefault();mDZ.classList.remove('dz-drag');
     const files=Array.from(e.dataTransfer.files).filter(f=>f.type==='application/pdf');
     if(!files.length)return setStatus('mergeStatus',"Seuls les PDF sont acceptés.",'error');
     await addMergeFiles({target:{files,value:''}});
@@ -1400,8 +1441,8 @@ const CMP_PRESETS={
 let cmpFile=null, cmpResultBlob=null, cmpResultName='', cmpCurrentPreset=null;
 
 function cmpTriggerInput(){document.getElementById('cmpFileInput').click();}
-function cmpOnDragOver(e){e.preventDefault();document.getElementById('cmpDropZone').classList.add('border-amber-500/60','bg-amber-500/[0.03]');}
-function cmpOnDragLeave(){document.getElementById('cmpDropZone').classList.remove('border-amber-500/60','bg-amber-500/[0.03]');}
+function cmpOnDragOver(e){e.preventDefault();document.getElementById('cmpDropZone').classList.add('dz-drag');}
+function cmpOnDragLeave(){document.getElementById('cmpDropZone').classList.remove('dz-drag');}
 function cmpOnDrop(e){e.preventDefault();cmpOnDragLeave();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')cmpHandleFile(f);}
 
 function cmpShow(id,flex){const el=document.getElementById(id);el.classList.toggle('hidden',!flex);el.classList.toggle('flex',!!flex);}
@@ -1544,8 +1585,8 @@ function cmpDownload(){if(cmpResultBlob)downloadFile(cmpResultBlob,cmpResultName
 let wmFile=null, wmPdfDoc=null, wmColor='#a1a1aa';
 
 function wmTriggerInput(){document.getElementById('wmFileInput').click();}
-function wmOnDragOver(e){e.preventDefault();document.getElementById('wmDropZone').classList.add('border-amber-500/60');}
-function wmOnDragLeave(){document.getElementById('wmDropZone').classList.remove('border-amber-500/60');}
+function wmOnDragOver(e){e.preventDefault();document.getElementById('wmDropZone').classList.add('dz-drag');}
+function wmOnDragLeave(){document.getElementById('wmDropZone').classList.remove('dz-drag');}
 function wmOnDrop(e){e.preventDefault();wmOnDragLeave();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')wmHandleFile(f);}
 
 async function wmHandleFile(file){
@@ -1553,6 +1594,7 @@ async function wmHandleFile(file){
     document.getElementById('wmFileName').textContent=file.name;
     document.getElementById('wmEmptyState').classList.add('hidden');
     const ls=document.getElementById('wmLoadedState');ls.classList.remove('hidden');ls.classList.add('flex');
+    const ctrl=document.getElementById('wmControls');ctrl.classList.remove('hidden');ctrl.classList.add('flex');
 
     // Charger pdf.js pour aperçu + compter les pages
     const buf=await file.arrayBuffer();
@@ -1569,6 +1611,7 @@ function wmClearFile(e){
     document.getElementById('wmFileInput').value='';
     document.getElementById('wmEmptyState').classList.remove('hidden');
     const ls=document.getElementById('wmLoadedState');ls.classList.add('hidden');ls.classList.remove('flex');
+    const ctrl=document.getElementById('wmControls');ctrl.classList.add('hidden');ctrl.classList.remove('flex');
     document.getElementById('wmPreviewPlaceholder').classList.remove('hidden');
     const c=document.getElementById('wmPreviewCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height);
     wmUpdateRunBtn();
@@ -1757,8 +1800,8 @@ let rdScale=1;                  // px du canvas par point PDF (échelle d'affich
 let rdBase=document.createElement('canvas'); // rendu mis en cache de la page
 
 function rdTriggerInput(){document.getElementById('rdFileInput').click();}
-function rdOnDragOver(e){e.preventDefault();document.getElementById('rdDropZone').classList.add('border-amber-500/60');}
-function rdOnDragLeave(){document.getElementById('rdDropZone').classList.remove('border-amber-500/60');}
+function rdOnDragOver(e){e.preventDefault();document.getElementById('rdDropZone').classList.add('dz-drag');}
+function rdOnDragLeave(){document.getElementById('rdDropZone').classList.remove('dz-drag');}
 function rdOnDrop(e){e.preventDefault();rdOnDragLeave();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')rdHandleFile(f);}
 
 async function rdHandleFile(file){
@@ -1774,6 +1817,7 @@ async function rdHandleFile(file){
     document.getElementById('rdPageTotal').textContent=rdNumPages;
 
     const ws=document.getElementById('rdWorkspace');ws.classList.remove('hidden');ws.classList.add('flex');
+    const act=document.getElementById('rdActions');act.classList.remove('hidden');act.classList.add('flex');
     await rdRenderPage();
     rdUpdateRunBtn();
 }
@@ -1785,6 +1829,7 @@ function rdClearFile(e){
     document.getElementById('rdEmptyState').classList.remove('hidden');
     const ls=document.getElementById('rdLoadedState');ls.classList.add('hidden');ls.classList.remove('flex');
     const ws=document.getElementById('rdWorkspace');ws.classList.add('hidden');ws.classList.remove('flex');
+    const act=document.getElementById('rdActions');act.classList.add('hidden');act.classList.remove('flex');
     rdUpdateRunBtn();
 }
 
