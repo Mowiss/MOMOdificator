@@ -1618,29 +1618,53 @@ async function wmPreview(){
 }
 
 // Fonction centrale de dessin du filigrane — réutilisée pour l'aperçu ET l'export
-function wmDrawWatermark(ctx, w, h, text, opacity, color){
+// Taille de police partagée (proportionnelle à la diagonale, bornée)
+function wmFontSize(diag){ return Math.min(Math.max(diag*0.055,20),75); }
+
+// Géométrie partagée aperçu/export : renvoie les positions (ligne de base, à gauche)
+// des copies du filigrane, en espace PAGE (origine bas-gauche, y vers le haut),
+// orientées à 45° anti-horaire. Le pas horizontal = largeur du texte + marge,
+// donc les répétitions ne se chevauchent JAMAIS.
+function wmComputeTiles(w,h,fontSize,textWidth){
+    const ang=Math.PI/4;
+    const ux=Math.cos(ang), uy=Math.sin(ang);     // direction du texte
+    const vx=-Math.sin(ang), vy=Math.cos(ang);    // perpendiculaire ("haut" du texte)
+    const stepX=textWidth + fontSize*1.4;          // pas le long du texte (> largeur ⇒ pas de superposition)
+    const stepY=fontSize*2.6;                       // interligne
+    const vOff=fontSize*0.35;                        // décalage centre → ligne de base
     const diag=Math.sqrt(w*w+h*h);
-    // Taille de police proportionnelle à la diagonale, plafonnée
-    const fontSize=Math.min(Math.max(diag*0.07, 28), 120);
-
-    ctx.save();
-    ctx.globalAlpha=opacity;
-    ctx.translate(w/2, h/2);
-    ctx.rotate(-Math.PI/4); // 45° dans la diagonale
-
-    ctx.font=`bold ${fontSize}px 'Comfortaa', cursive`;
-    ctx.fillStyle=color;
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
-
-    // Répétition du texte en grille si le document est grand
-    const spacing=fontSize*2.2;
-    const cols=Math.ceil(diag/spacing)+2;
-    for(let r=-1;r<=1;r++){
-        for(let c=-Math.ceil(cols/2);c<=Math.ceil(cols/2);c++){
-            ctx.fillText(text, c*spacing*1.8, r*spacing);
+    const ni=Math.ceil(diag/stepX)+1;
+    const nj=Math.ceil(diag/stepY)+1;
+    const cx=w/2, cy=h/2, pts=[];
+    for(let j=-nj;j<=nj;j++){
+        for(let i=-ni;i<=ni;i++){
+            const ctrX=cx + i*stepX*ux + j*stepY*vx;
+            const ctrY=cy + i*stepX*uy + j*stepY*vy;
+            pts.push({ x: ctrX - (textWidth/2)*ux - vOff*vx,
+                       y: ctrY - (textWidth/2)*uy - vOff*vy });
         }
     }
+    return pts;
+}
+
+// Rendu du filigrane sur le canvas d'aperçu — reproduit fidèlement l'export pdf-lib
+function wmDrawWatermark(ctx, w, h, text, opacity, color){
+    const diag=Math.sqrt(w*w+h*h);
+    const fontSize=wmFontSize(diag);
+    ctx.save();
+    ctx.globalAlpha=opacity;
+    ctx.font=`bold ${fontSize}px Arial, Helvetica, sans-serif`; // proche de la police d'export (Helvetica)
+    ctx.fillStyle=color;
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    const tw=ctx.measureText(text).width;
+    const pts=wmComputeTiles(w,h,fontSize,tw);
+    pts.forEach(p=>{
+        ctx.save();
+        ctx.translate(p.x, h-p.y);   // page (y vers le haut) → canvas (y vers le bas)
+        ctx.rotate(-Math.PI/4);      // 45° anti-horaire en page = -45° en canvas
+        ctx.fillText(text,0,0);
+        ctx.restore();
+    });
     ctx.restore();
 }
 
@@ -1666,9 +1690,10 @@ async function wmRun(){
     wmSetProgress(2,'Lecture du PDF…');
 
     try{
-        const {PDFDocument, rgb, degrees} = window.PDFLib;
+        const {PDFDocument, rgb, degrees, StandardFonts} = window.PDFLib;
         const buf=await wmFile.arrayBuffer();
         const pdfDoc=await PDFDocument.load(buf);
+        const font=await pdfDoc.embedFont(StandardFonts.HelveticaBold);
         const pages=pdfDoc.getPages();
         const numPages=pages.length;
         const col=wmHexToRgb(wmColor);
@@ -1678,23 +1703,19 @@ async function wmRun(){
             const page=pages[i];
             const {width,height}=page.getSize();
             const diag=Math.sqrt(width*width+height*height);
-            const fontSize=Math.min(Math.max(diag*0.07,18),90);
-            const spacing=fontSize*2.2;
-            const cols=Math.ceil(diag/spacing)+2;
+            const fontSize=wmFontSize(diag);
+            const tw=font.widthOfTextAtSize(text,fontSize);
 
-            // Répétition en grille identique à l'aperçu canvas
-            for(let r=-1;r<=1;r++){
-                for(let c=-Math.ceil(cols/2);c<=Math.ceil(cols/2);c++){
-                    page.drawText(text,{
-                        x: width/2 + c*spacing*1.8,
-                        y: height/2 + r*spacing,
-                        size: fontSize,
-                        color: rgb(col.r, col.g, col.b),
-                        opacity: opacity,
-                        rotate: degrees(45),
-                    });
-                }
-            }
+            // Géométrie identique à l'aperçu (espacement sans chevauchement)
+            const pts=wmComputeTiles(width,height,fontSize,tw);
+            pts.forEach(p=>{
+                page.drawText(text,{
+                    x:p.x, y:p.y, size:fontSize, font,
+                    color: rgb(col.r,col.g,col.b),
+                    opacity: opacity,
+                    rotate: degrees(45),
+                });
+            });
         }
 
         wmSetProgress(97,'Finalisation…');
