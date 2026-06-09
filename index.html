@@ -122,6 +122,12 @@
         .merge-page-delete{position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(239,68,68,.85);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;opacity:0;transition:opacity .15s;z-index:10;border:none}
         .merge-page-card:hover .merge-page-delete{opacity:1}
         .merge-page-num{position:absolute;top:4px;left:4px;background:rgba(0,0,0,.7);color:#f59e0b;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;pointer-events:none;font-family:monospace}
+        .merge-page-rot{position:absolute;bottom:4px;width:22px;height:22px;background:rgba(245,158,11,.92);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#000;cursor:pointer;opacity:0;transition:opacity .15s,background .15s;z-index:11;border:none;padding:0}
+        .merge-page-rot:hover{background:#f59e0b}
+        .merge-page-rot.left{left:4px}
+        .merge-page-rot.right{right:4px}
+        .merge-page-card:hover .merge-page-rot{opacity:1}
+        .merge-page-rot svg{width:13px;height:13px}
         @keyframes cardIn{from{opacity:0;transform:scale(.85) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
         .merge-page-card{animation:cardIn .25s ease both}
         /* ── COMPRESSION PDF ── */
@@ -1371,7 +1377,7 @@ async function addMergeFiles(event){
             const page=await pdf.getPage(i+1),vp=page.getViewport({scale:0.4});
             const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
             await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
-            mergePages.push({pdfBytes:ab.slice(),pageIndex:i,fileName:file.name,canvasDataUrl:c.toDataURL('image/jpeg',0.7)});
+            mergePages.push({pdfBytes:ab.slice(),pageIndex:i,fileName:file.name,canvasDataUrl:c.toDataURL('image/jpeg',0.7),rotation:0});
         }
     }
     event.target.value='';renderMergeGrid();
@@ -1390,12 +1396,20 @@ function renderMergeGrid(){
         const card=document.createElement('div');card.className='merge-page-card';card.draggable=true;
         card.style.animationDelay=`${Math.min(idx*30,300)}ms`;
         const num=document.createElement('div');num.className='merge-page-num';num.textContent=idx+1;
-        const img=document.createElement('img');img.src=pg.canvasDataUrl;img.style.cssText='width:100%;height:auto;display:block;pointer-events:none';
+        const img=mergeThumb(pg);
         const lbl=document.createElement('div');lbl.className='merge-page-label';
         lbl.textContent=`${pg.fileName.length>18?pg.fileName.substring(0,15)+'…':pg.fileName} · p.${pg.pageIndex+1}`;
-        const del=document.createElement('button');del.className='merge-page-delete';del.innerHTML='✕';
+        const del=document.createElement('button');del.className='merge-page-delete';del.innerHTML='✕';del.title='Supprimer la page';
         del.onclick=e=>{e.stopPropagation();mergePages.splice(idx,1);renderMergeGrid();setStatus('mergeStatus',`${mergePages.length} page(s) restante(s)`,'pending');};
-        card.append(num,img,lbl,del);
+        // Rotation gauche (anti-horaire) en bas à gauche
+        const rotL=document.createElement('button');rotL.className='merge-page-rot left';rotL.title='Pivoter à gauche';
+        rotL.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L4 10l5-5"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 10h11a5 5 0 015 5v1"/></svg>';
+        rotL.onclick=e=>{e.stopPropagation();pg.rotation=(pg.rotation+270)%360;renderMergeGrid();};
+        // Rotation droite (horaire) en bas à droite
+        const rotR=document.createElement('button');rotR.className='merge-page-rot right';rotR.title='Pivoter à droite';
+        rotR.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 15l5-5-5-5"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 10H9a5 5 0 00-5 5v1"/></svg>';
+        rotR.onclick=e=>{e.stopPropagation();pg.rotation=(pg.rotation+90)%360;renderMergeGrid();};
+        card.append(num,img,lbl,del,rotL,rotR);
         card.addEventListener('dragstart',e=>{dragSrcIndex=idx;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
         card.addEventListener('dragend',()=>{card.classList.remove('dragging');document.querySelectorAll('.merge-page-card.drag-over').forEach(c=>c.classList.remove('drag-over'));});
         card.addEventListener('dragover',e=>{e.preventDefault();document.querySelectorAll('.merge-page-card.drag-over').forEach(c=>c.classList.remove('drag-over'));if(idx!==dragSrcIndex)card.classList.add('drag-over');});
@@ -1405,14 +1419,42 @@ function renderMergeGrid(){
     });
 }
 
+// Vignette redessinée selon la rotation de la page (0/90/180/270°, horaire)
+function mergeThumb(pg){
+    const img=document.createElement('img');
+    img.style.cssText='width:100%;height:auto;display:block;pointer-events:none';
+    const r=((pg.rotation||0)%360+360)%360;
+    if(!r){img.src=pg.canvasDataUrl;return img;}
+    const base=new Image();
+    base.onload=()=>{
+        const swap=(r===90||r===270);
+        const c=document.createElement('canvas');
+        c.width = swap?base.height:base.width;
+        c.height= swap?base.width:base.height;
+        const ctx=c.getContext('2d');
+        ctx.translate(c.width/2,c.height/2);
+        ctx.rotate(r*Math.PI/180);
+        ctx.drawImage(base,-base.width/2,-base.height/2);
+        img.src=c.toDataURL('image/jpeg',0.7);
+    };
+    base.src=pg.canvasDataUrl;
+    return img;
+}
+
 function clearAllMergePages(){mergePages=[];renderMergeGrid();}
 
 async function exportMergedPdf(){
     if(!mergePages.length)return setStatus('mergeStatus',"Aucune page à exporter.",'error');
     setStatus('mergeStatus',"Assemblage...",'pending');
     try{
-        const{PDFDocument}=window.PDFLib,out=await PDFDocument.create();
-        for(const pg of mergePages){const src=await PDFDocument.load(pg.pdfBytes);const[p]=await out.copyPages(src,[pg.pageIndex]);out.addPage(p);}
+        const{PDFDocument,degrees}=window.PDFLib,out=await PDFDocument.create();
+        for(const pg of mergePages){
+            const src=await PDFDocument.load(pg.pdfBytes);
+            const[p]=await out.copyPages(src,[pg.pageIndex]);
+            const base=(p.getRotation()&&p.getRotation().angle)||0;
+            p.setRotation(degrees((base+(pg.rotation||0))%360));
+            out.addPage(p);
+        }
         const bytes=await out.save();
         downloadFile(new Blob([bytes],{type:'application/pdf'}),`MOMO_Assemblage_${Date.now()}.pdf`);
         setStatus('mergeStatus',`PDF exporté — ${mergePages.length} page(s) ✓`,'success');
