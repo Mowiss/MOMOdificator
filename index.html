@@ -28,6 +28,18 @@
         .section-chevron{transition:transform .4s cubic-bezier(.4,0,.2,1)}
         .section-chevron.open{transform:rotate(180deg)}
 
+        /* ── ONGLETS — barre d'outils en haut ── */
+        .tool-card{display:none}
+        .tool-card.active{display:block}
+        .tool-card .section-body{grid-template-rows:1fr !important;opacity:1 !important} /* toujours déplié en mode onglet */
+        .tool-card .section-chevron{display:none}
+        .tool-card>button{cursor:default}
+        .tabbar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+        .tab-btn{display:flex;align-items:center;gap:6px;padding:9px 15px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#a1a1aa;background:transparent;border:1px solid transparent;transition:all .15s;cursor:pointer;white-space:nowrap}
+        .tab-btn:hover{background:#18181b;color:#e4e4e7}
+        .tab-btn.tab-active{background:#27272a;color:#fff;border-color:rgba(245,158,11,.5);box-shadow:0 0 10px rgba(245,158,11,.15)}
+        .tab-btn svg{width:16px;height:16px;color:#f59e0b}
+
         /* ── CONVERTISSEUR UNIVERSEL ── */
         #convDropZone{
             border:2px dashed #3f3f46;border-radius:14px;padding:32px 24px;text-align:center;
@@ -124,10 +136,34 @@
         <p class="text-[10px] text-zinc-500 uppercase tracking-widest z-10">Traitement 100% local • Zéro donnée sur serveur</p>
     </div>
 
+    <!-- BARRE D'OUTILS (onglets) -->
+    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 shadow-xl p-2">
+        <div class="tabbar">
+            <button class="tab-btn tab-active" data-tab="editor" onclick="switchTab('editor')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>Modifier
+            </button>
+            <button class="tab-btn" data-tab="conv" onclick="switchTab('conv')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Convertir
+            </button>
+            <button class="tab-btn" data-tab="merge" onclick="switchTab('merge')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>Fusion
+            </button>
+            <button class="tab-btn" data-tab="compress" onclick="switchTab('compress')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>Compresser
+            </button>
+            <button class="tab-btn" data-tab="wm" onclick="switchTab('wm')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>Filigrane
+            </button>
+            <button class="tab-btn" data-tab="redact" onclick="switchTab('redact')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>Caviardage
+            </button>
+        </div>
+    </div>
+
     <!-- ═══════════════════════════════════
          SECTION 1 — MODIFICATION PDF
     ═══════════════════════════════════ -->
-    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+    <div id="card-editor" class="tool-card active bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
         <button onclick="toggleSection('sec-editor','chev-editor')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
             <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
@@ -316,7 +352,7 @@
     <!-- ═══════════════════════════════════
          SECTION 2 — CONVERTISSEUR UNIVERSEL
     ═══════════════════════════════════ -->
-    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+    <div id="card-conv" class="tool-card bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
         <button onclick="toggleSection('sec-conv','chev-conv')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
             <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -363,7 +399,7 @@
     <!-- ═══════════════════════════════════
          SECTION 3 — FUSION & ASSEMBLAGE PDF
     ═══════════════════════════════════ -->
-    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+    <div id="card-merge" class="tool-card bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
         <button onclick="toggleSection('sec-merge','chev-merge')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
             <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -401,7 +437,7 @@
     <!-- ═══════════════════════════════════
          SECTION 4 — COMPRESSION PDF
     ═══════════════════════════════════ -->
-    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+    <div id="card-compress" class="tool-card bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
         <button onclick="toggleSection('sec-compress','chev-compress')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
             <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
@@ -532,7 +568,7 @@
     <!-- ═══════════════════════════════════
          SECTION 5 — FILIGRANE PDF
     ═══════════════════════════════════ -->
-    <div class="bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+    <div id="card-wm" class="tool-card bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
         <button onclick="toggleSection('sec-wm','chev-wm')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
             <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
@@ -628,6 +664,94 @@
         </div></div></div>
     </div>
 
+    <!-- ═══════════════════════════════════
+         SECTION 6 — CAVIARDAGE DESTRUCTIF
+    ═══════════════════════════════════ -->
+    <div id="card-redact" class="tool-card bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl">
+        <button onclick="toggleSection('sec-redact','chev-redact')" class="w-full p-4 flex justify-between items-center bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors border-b border-zinc-900">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                Caviardage destructif
+            </h2>
+            <svg id="chev-redact" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-500 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="sec-redact" class="section-body"><div class="section-inner"><div class="p-6 flex flex-col gap-5">
+
+            <!-- Drop zone -->
+            <div id="rdDropZone" onclick="rdTriggerInput()" ondragover="rdOnDragOver(event)" ondragleave="rdOnDragLeave()" ondrop="rdOnDrop(event)"
+                class="border-2 border-dashed border-zinc-700 rounded-xl p-6 text-center cursor-pointer transition-all hover:border-amber-500/60 hover:bg-amber-500/[0.02] flex flex-col items-center justify-center gap-3 min-h-[110px]">
+                <input type="file" id="rdFileInput" accept=".pdf" class="hidden" onchange="rdHandleFile(this.files[0])">
+                <div id="rdEmptyState" class="flex flex-col items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <p class="text-xs font-bold text-zinc-500">Déposez un PDF ou cliquez</p>
+                </div>
+                <div id="rdLoadedState" class="hidden flex-col items-center gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-amber-500 text-black text-[9px] font-bold px-2 py-0.5 rounded">PDF</span>
+                        <span id="rdFileName" class="text-xs font-bold text-zinc-200 truncate max-w-[200px]"></span>
+                    </div>
+                    <button onclick="rdClearFile(event)" class="text-[9px] text-zinc-600 hover:text-red-400 border border-zinc-800 rounded px-2 py-0.5 transition-colors">Changer de fichier</button>
+                </div>
+            </div>
+
+            <!-- Espace de travail (caché tant qu'aucun PDF) -->
+            <div id="rdWorkspace" class="hidden flex-col gap-3">
+
+                <!-- Barre d'outils -->
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <!-- Navigation pages -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="rdGoto(rdPage-1)" class="btn-tool" title="Page précédente">‹</button>
+                        <span class="text-[11px] font-bold text-zinc-300 font-mono whitespace-nowrap">Page <span id="rdPageNum" class="text-amber-500">1</span> / <span id="rdPageTotal">1</span></span>
+                        <button onclick="rdGoto(rdPage+1)" class="btn-tool" title="Page suivante">›</button>
+                        <span id="rdPageBadge" class="hidden ml-1 text-[9px] font-bold uppercase tracking-widest bg-zinc-800 text-amber-400 border border-amber-600/40 rounded px-2 py-1"></span>
+                    </div>
+                    <!-- Épaisseur -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Épaisseur</span>
+                        <span id="rdThickVal" class="text-xs font-bold text-amber-500 font-mono w-12 text-right">14 pt</span>
+                        <span class="text-[9px] text-zinc-600 italic">(molette)</span>
+                    </div>
+                    <!-- Actions page -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="rdUndoLast()" class="btn-action bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[10px]">Annuler dernier</button>
+                        <button onclick="rdClearPage()" class="btn-action bg-zinc-900 hover:bg-red-950 text-zinc-500 hover:text-red-400 border border-zinc-800 text-[10px]">Effacer la page</button>
+                    </div>
+                </div>
+
+                <!-- Consigne -->
+                <p class="text-[10px] text-center text-zinc-500 uppercase tracking-widest">
+                    Clic 1 = départ · molette = largeur · Maj = trait orthogonal · clic 2 = pose le masque · clic droit / Échap = annuler
+                </p>
+
+                <!-- Canvas -->
+                <div id="rdCanvasWrap" class="relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900/40 p-3 flex items-center justify-center" style="height:calc(100vh - 300px);min-height:340px">
+                    <canvas id="rdCanvas" class="block shadow-lg" style="max-width:100%;max-height:100%;width:auto;height:auto;cursor:crosshair;touch-action:none"></canvas>
+                </div>
+            </div>
+
+            <!-- Bouton recompiler -->
+            <button id="rdRunBtn" onclick="rdRun()"
+                class="btn-action w-full max-w-xs mx-auto bg-zinc-700 text-zinc-400 border border-zinc-600 pointer-events-none opacity-50 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span id="rdRunLabel">PDF + 1 masque requis</span>
+            </button>
+            <p class="text-[9px] text-center text-zinc-600 -mt-2">Les pages caviardées sont aplaties en image : le contenu sous les masques noirs est définitivement supprimé.</p>
+
+            <!-- Progression -->
+            <div id="rdProgressWrap" class="hidden flex-col gap-2">
+                <div class="flex justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                    <span id="rdProgressLabel">Traitement…</span>
+                    <span id="rdProgressPct">0%</span>
+                </div>
+                <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div id="rdProgressBar" class="h-full bg-amber-500 rounded-full transition-all duration-150" style="width:0%"></div>
+                </div>
+            </div>
+
+        </div></div></div>
+    </div>
+
 </div><!-- /max-w-5xl -->
 
 <script>
@@ -638,6 +762,25 @@ function toggleSection(id,chevId){
     const s=document.getElementById(id),c=document.getElementById(chevId),o=s.classList.contains('open');
     s.classList.toggle('open',!o); c.classList.toggle('open',!o);
 }
+// Bascule d'onglet : affiche un seul panneau à la fois
+function switchTab(name){
+    document.querySelectorAll('.tool-card').forEach(c=>c.classList.remove('active'));
+    const card=document.getElementById('card-'+name);
+    if(card)card.classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('tab-active',b.dataset.tab===name));
+    // Re-rendre le caviardage à la bonne taille une fois le panneau visible
+    if(name==='redact'&&typeof rdPdfDoc!=='undefined'&&rdPdfDoc)requestAnimationFrame(()=>rdRenderPage());
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+// Re-rendu du caviardage si la fenêtre change de taille (fit conservé)
+let rdResizeTimer=null;
+window.addEventListener('resize',()=>{
+    clearTimeout(rdResizeTimer);
+    rdResizeTimer=setTimeout(()=>{
+        const card=document.getElementById('card-redact');
+        if(card&&card.classList.contains('active')&&typeof rdPdfDoc!=='undefined'&&rdPdfDoc)rdRenderPage();
+    },200);
+});
 function downloadFile(blob,name){
     const u=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=u;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
@@ -1577,6 +1720,290 @@ function wmSetProgress(pct,label){
     document.getElementById('wmProgressPct').textContent=Math.round(pct)+'%';
     if(label)document.getElementById('wmProgressLabel').textContent=label;
 }
+
+// ================================================================
+// SECTION 6 — CAVIARDAGE DESTRUCTIF
+// ================================================================
+// Les coordonnées des masques sont stockées en "points PDF" (viewport
+// scale 1, origine haut-gauche), donc indépendantes du zoom d'affichage
+// et directement réutilisables à l'export.
+let rdFile=null, rdPdfDoc=null, rdNumPages=0, rdPage=1;
+let rdMasks={};                 // { numPage(1-based): [{x1,y1,x2,y2,thickness}] }
+let rdStart=null, rdHover=null, rdRawHover=null; // état du tracé en cours (points PDF)
+let rdThickness=14;             // épaisseur courante en points
+let rdPageW=0, rdPageH=0;       // dimensions de la page courante en points
+let rdScale=1;                  // px du canvas par point PDF (échelle d'affichage)
+let rdBase=document.createElement('canvas'); // rendu mis en cache de la page
+
+function rdTriggerInput(){document.getElementById('rdFileInput').click();}
+function rdOnDragOver(e){e.preventDefault();document.getElementById('rdDropZone').classList.add('border-amber-500/60');}
+function rdOnDragLeave(){document.getElementById('rdDropZone').classList.remove('border-amber-500/60');}
+function rdOnDrop(e){e.preventDefault();rdOnDragLeave();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')rdHandleFile(f);}
+
+async function rdHandleFile(file){
+    rdFile=file;
+    rdMasks={}; rdStart=null; rdHover=null; rdPage=1;
+    document.getElementById('rdFileName').textContent=file.name;
+    document.getElementById('rdEmptyState').classList.add('hidden');
+    const ls=document.getElementById('rdLoadedState');ls.classList.remove('hidden');ls.classList.add('flex');
+
+    const buf=await file.arrayBuffer();
+    rdPdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(buf.slice())}).promise;
+    rdNumPages=rdPdfDoc.numPages;
+    document.getElementById('rdPageTotal').textContent=rdNumPages;
+
+    const ws=document.getElementById('rdWorkspace');ws.classList.remove('hidden');ws.classList.add('flex');
+    await rdRenderPage();
+    rdUpdateRunBtn();
+}
+
+function rdClearFile(e){
+    e.stopPropagation();
+    rdFile=null; rdPdfDoc=null; rdMasks={}; rdStart=null; rdHover=null; rdPage=1;
+    document.getElementById('rdFileInput').value='';
+    document.getElementById('rdEmptyState').classList.remove('hidden');
+    const ls=document.getElementById('rdLoadedState');ls.classList.add('hidden');ls.classList.remove('flex');
+    const ws=document.getElementById('rdWorkspace');ws.classList.add('hidden');ws.classList.remove('flex');
+    rdUpdateRunBtn();
+}
+
+// Rendu de la page courante dans le cache rdBase, puis composition
+async function rdRenderPage(){
+    if(!rdPdfDoc)return;
+    rdStart=null; rdHover=null;
+    const page=await rdPdfDoc.getPage(rdPage);
+    const vp1=page.getViewport({scale:1});
+    rdPageW=vp1.width; rdPageH=vp1.height;
+
+    const canvas=document.getElementById('rdCanvas');
+    const wrap=canvas.parentElement;
+    // Espace dispo (conteneur moins le padding p-3 = 24px par dimension)
+    const availW=Math.max(280,(wrap.clientWidth||860)-24);
+    const availH=Math.max(300,(wrap.clientHeight||700)-24);
+    // Taille d'affichage en "contain" : la page entière tient sans défilement
+    const fitW=Math.min(availW, availH*(rdPageW/rdPageH));
+    // Résolution interne ~2× la taille affichée pour rester net (plafonnée à 3×)
+    rdScale=Math.min(3, (fitW/rdPageW)*2);
+    const vp=page.getViewport({scale:rdScale});
+
+    rdBase.width=Math.round(vp.width);
+    rdBase.height=Math.round(vp.height);
+    await page.render({canvasContext:rdBase.getContext('2d'),viewport:vp}).promise;
+
+    canvas.width=rdBase.width; canvas.height=rdBase.height;
+    // L'affichage (taille à l'écran) est géré par le CSS : max-width/max-height 100%, width/height auto
+
+    document.getElementById('rdPageNum').textContent=rdPage;
+    rdComposite();
+    rdUpdatePageBadge();
+}
+
+// Dessine un masque (coords en points) sur un ctx dont l'échelle pt→px = s
+function rdStroke(ctx,m,s,opts){
+    opts=opts||{};
+    ctx.save();
+    ctx.strokeStyle=opts.color||'#000';
+    ctx.globalAlpha=opts.alpha!=null?opts.alpha:1;
+    ctx.lineCap='butt'; ctx.lineJoin='miter';
+    ctx.lineWidth=Math.max(1,m.thickness*s);
+    ctx.beginPath();
+    ctx.moveTo(m.x1*s,m.y1*s);
+    ctx.lineTo(m.x2*s,m.y2*s);
+    ctx.stroke();
+    ctx.restore();
+}
+
+// Recompose le canvas visible : page + masques validés + tracé en cours
+function rdComposite(){
+    const canvas=document.getElementById('rdCanvas');
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(rdBase,0,0);
+
+    // Masques déjà validés sur cette page
+    (rdMasks[rdPage]||[]).forEach(m=>rdStroke(ctx,m,rdScale));
+
+    // Tracé en cours (départ posé, on suit la souris)
+    if(rdStart){
+        const end=rdHover||rdStart;
+        const m={x1:rdStart.x,y1:rdStart.y,x2:end.x,y2:end.y,thickness:rdThickness};
+        rdStroke(ctx,m,rdScale,{alpha:0.7});
+        // axe + point de départ en ambre pour visualiser
+        ctx.save();
+        ctx.strokeStyle='#f59e0b'; ctx.setLineDash([5,4]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(m.x1*rdScale,m.y1*rdScale); ctx.lineTo(m.x2*rdScale,m.y2*rdScale); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='#f59e0b';
+        ctx.beginPath(); ctx.arc(m.x1*rdScale,m.y1*rdScale,3,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+// Conversion position souris → points PDF
+function rdEventToPage(e){
+    const canvas=document.getElementById('rdCanvas');
+    const r=canvas.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width*rdPageW;
+    const y=(e.clientY-r.top)/r.height*rdPageH;
+    return {x:Math.max(0,Math.min(rdPageW,x)), y:Math.max(0,Math.min(rdPageH,y))};
+}
+
+// Contraint p sur l'axe horizontal ou vertical depuis s (Shift maintenu)
+function rdSnap(s,p){
+    return (Math.abs(p.x-s.x)>=Math.abs(p.y-s.y)) ? {x:p.x,y:s.y} : {x:s.x,y:p.y};
+}
+
+function rdOnClick(e){
+    if(!rdPdfDoc)return;
+    const raw=rdEventToPage(e);
+    if(!rdStart){
+        rdStart=raw; rdRawHover=raw; rdHover=raw;          // clic 1 : départ
+    }else{
+        const p=e.shiftKey?rdSnap(rdStart,raw):raw;        // clic 2 : pose (ortho si Shift)
+        if(!rdMasks[rdPage])rdMasks[rdPage]=[];
+        rdMasks[rdPage].push({x1:rdStart.x,y1:rdStart.y,x2:p.x,y2:p.y,thickness:rdThickness});
+        rdStart=null; rdHover=null; rdRawHover=null;
+        rdUpdatePageBadge(); rdUpdateRunBtn();
+    }
+    rdComposite();
+}
+function rdOnMove(e){
+    if(!rdPdfDoc||!rdStart)return;
+    rdRawHover=rdEventToPage(e);
+    rdHover=e.shiftKey?rdSnap(rdStart,rdRawHover):rdRawHover;
+    rdComposite();
+}
+function rdOnWheel(e){
+    if(!rdPdfDoc)return;
+    e.preventDefault();
+    rdThickness=Math.max(2,Math.min(200,rdThickness+(e.deltaY<0?2:-2)));
+    document.getElementById('rdThickVal').textContent=rdThickness+' pt';
+    rdComposite();
+}
+function rdCancelPending(e){
+    if(e)e.preventDefault();
+    if(rdStart){rdStart=null;rdHover=null;rdComposite();}
+}
+
+function rdGoto(n){
+    if(!rdPdfDoc)return;
+    n=Math.max(1,Math.min(rdNumPages,n));
+    if(n===rdPage)return;
+    rdPage=n; rdRenderPage();
+}
+function rdUndoLast(){
+    const arr=rdMasks[rdPage];
+    if(arr&&arr.length){arr.pop();rdComposite();rdUpdatePageBadge();rdUpdateRunBtn();}
+}
+function rdClearPage(){
+    if(rdMasks[rdPage]){delete rdMasks[rdPage];rdComposite();rdUpdatePageBadge();rdUpdateRunBtn();}
+}
+function rdUpdatePageBadge(){
+    const n=(rdMasks[rdPage]||[]).length;
+    const b=document.getElementById('rdPageBadge');
+    if(n>0){b.textContent=n+' masque'+(n>1?'s':'');b.classList.remove('hidden');}
+    else b.classList.add('hidden');
+}
+function rdTotalMasks(){return Object.values(rdMasks).reduce((s,a)=>s+a.length,0);}
+
+function rdUpdateRunBtn(){
+    const ready=!!rdFile&&rdTotalMasks()>0;
+    const btn=document.getElementById('rdRunBtn'),lbl=document.getElementById('rdRunLabel');
+    if(ready){
+        const n=rdTotalMasks();
+        lbl.textContent='Recompiler le document ('+n+' masque'+(n>1?'s':'')+')';
+        btn.classList.remove('bg-zinc-700','text-zinc-400','border-zinc-600','pointer-events-none','opacity-50');
+        btn.classList.add('bg-amber-600','hover:bg-amber-500','text-white','border-transparent');
+    }else{
+        lbl.textContent=rdFile?'Posez au moins 1 masque':'PDF + 1 masque requis';
+        btn.classList.add('bg-zinc-700','text-zinc-400','border-zinc-600','pointer-events-none','opacity-50');
+        btn.classList.remove('bg-amber-600','hover:bg-amber-500','text-white','border-transparent');
+    }
+}
+function rdSetProgress(pct,label){
+    document.getElementById('rdProgressBar').style.width=pct+'%';
+    document.getElementById('rdProgressPct').textContent=Math.round(pct)+'%';
+    if(label)document.getElementById('rdProgressLabel').textContent=label;
+}
+
+// Recompilation DESTRUCTIVE :
+//  - page avec masque(s) → rastérisée en image (texte/vecteurs perdus sous le noir)
+//  - page sans masque    → copiée telle quelle (qualité vectorielle conservée)
+async function rdRun(){
+    if(!rdFile||rdTotalMasks()===0)return;
+    const pw=document.getElementById('rdProgressWrap');
+    pw.classList.remove('hidden');pw.classList.add('flex');
+    document.getElementById('rdRunBtn').classList.add('opacity-50','pointer-events-none');
+    document.getElementById('rdProgressBar').style.background='#f59e0b';
+    rdSetProgress(2,'Lecture du PDF…');
+
+    try{
+        const {PDFDocument}=window.PDFLib;
+        const buf=await rdFile.arrayBuffer();
+        const srcDoc=await PDFDocument.load(buf);
+        const outDoc=await PDFDocument.create();
+        const EXPORT_SCALE=3; // résolution de rastérisation des pages caviardées
+        const off=document.createElement('canvas');
+        const offCtx=off.getContext('2d');
+
+        for(let i=0;i<rdNumPages;i++){
+            const num=i+1;
+            rdSetProgress(5+(i/rdNumPages)*90,`Page ${num} / ${rdNumPages}…`);
+            const masks=rdMasks[num];
+
+            if(masks&&masks.length){
+                // Rastérisation haute résolution
+                const page=await rdPdfDoc.getPage(num);
+                const vp1=page.getViewport({scale:1});
+                const vp=page.getViewport({scale:EXPORT_SCALE});
+                off.width=Math.round(vp.width); off.height=Math.round(vp.height);
+                await page.render({canvasContext:offCtx,viewport:vp}).promise;
+                // On brûle les masques noirs (échelle pt→px = EXPORT_SCALE)
+                masks.forEach(m=>rdStroke(offCtx,m,EXPORT_SCALE));
+                // Embarquement en JPEG (le noir reste plein)
+                const blob=await new Promise(r=>off.toBlob(r,'image/jpeg',0.92));
+                const img=await outDoc.embedJpg(await blob.arrayBuffer());
+                const p=outDoc.addPage([vp1.width,vp1.height]);
+                p.drawImage(img,{x:0,y:0,width:vp1.width,height:vp1.height});
+            }else{
+                // Page intacte : copie vectorielle
+                const [copied]=await outDoc.copyPages(srcDoc,[i]);
+                outDoc.addPage(copied);
+            }
+        }
+
+        rdSetProgress(97,'Finalisation…');
+        const outBytes=await outDoc.save();
+        const out=new Blob([outBytes],{type:'application/pdf'});
+        downloadFile(out, rdFile.name.replace(/\.pdf$/i,'')+'_caviardé.pdf');
+
+        rdSetProgress(100,'Terminé ✓');
+        setTimeout(()=>{pw.classList.add('hidden');pw.classList.remove('flex');},700);
+    }catch(err){
+        console.error(err);
+        document.getElementById('rdProgressBar').style.background='#ef4444';
+        rdSetProgress(0,'Erreur — voir la console');
+    }finally{
+        document.getElementById('rdRunBtn').classList.remove('opacity-50','pointer-events-none');
+    }
+}
+
+// Branchement des écouteurs sur le canvas
+(function rdBind(){
+    const c=document.getElementById('rdCanvas');
+    if(!c)return;
+    c.addEventListener('click',rdOnClick);
+    c.addEventListener('mousemove',rdOnMove);
+    c.addEventListener('wheel',rdOnWheel,{passive:false});
+    c.addEventListener('contextmenu',rdCancelPending);
+    document.addEventListener('keydown',e=>{
+        if(e.key==='Escape')rdCancelPending();
+        if(e.key==='Shift'&&rdStart&&rdRawHover){rdHover=rdSnap(rdStart,rdRawHover);rdComposite();}
+    });
+    document.addEventListener('keyup',e=>{
+        if(e.key==='Shift'&&rdStart&&rdRawHover){rdHover=rdRawHover;rdComposite();}
+    });
+})();
 </script>
 </body>
 </html>
