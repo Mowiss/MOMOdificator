@@ -55,6 +55,17 @@
         .dz-change{font-size:10px;color:#71717a;border:1px solid #27272a;border-radius:7px;padding:4px 10px;transition:color .15s,border-color .15s;cursor:pointer;background:none}
         .dz-change:hover{color:#f87171;border-color:#7f1d1d}
 
+        /* ── Pellicule de pages (éditeur) ── */
+        #editorFilmstrip{display:flex;gap:8px;overflow-x:auto;padding:10px;background:#0a0a0a;border-top:1px solid #27272a;scrollbar-width:thin}
+        #editorFilmstrip:empty{display:none}
+        .ed-thumb{position:relative;flex:0 0 auto;border:2px solid #3f3f46;border-radius:6px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s;background:#18181b;line-height:0}
+        .ed-thumb:hover{border-color:#f59e0b}
+        .ed-thumb.active{border-color:#f59e0b;box-shadow:0 0 10px rgba(245,158,11,.45)}
+        .ed-thumb img{display:block;height:92px;width:auto;pointer-events:none}
+        .ed-thumb span{position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,.78);color:#f59e0b;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;font-family:monospace}
+        .ed-thumb .ed-annot-dot{position:absolute;top:3px;left:3px;width:7px;height:7px;border-radius:50%;background:#f59e0b;box-shadow:0 0 4px #f59e0b;display:none}
+        .ed-thumb.annotated .ed-annot-dot{display:block}
+
         /* ── CONVERTISSEUR UNIVERSEL ── */
         #convDropZone.has-file{padding:18px 20px;cursor:default}
 
@@ -373,6 +384,8 @@
                         </div>
                     </div>
                 </div>
+                <!-- Pellicule de défilement des pages -->
+                <div id="editorFilmstrip"></div>
                 <p id="editorStatusMobile" class="text-[10px] text-center text-zinc-600 uppercase tracking-widest font-bold mt-2 md:hidden">En attente d'un document…</p>
             </div>
 
@@ -878,6 +891,9 @@ function setStatus(id,msg,type){
 let currentEditorTool='brush', currentDrawColor='#000000';
 let isDrawing=false, lastX=0, lastY=0, drawingSnapshot=null;
 let editorOriginalFileName='document', pdfWidth=0, pdfHeight=0;
+// ── Multi-pages ──
+let editorDoc=null, editorPageCount=0, editorCurrentPage=-1, editorAnnot=[], editorEventsBound=false;
+const EDITOR_SCALE=1.5;
 let currentZoom=1, isPanning=false, panStartX=0, panStartY=0, translateX=0, translateY=0;
 let undoStack=[], redoStack=[]; const MAX_HISTORY=30;
 
@@ -1140,30 +1156,93 @@ async function editorLoadFile(file){
     reader.onload=async e=>{
         try{
             const ta=new Uint8Array(e.target.result);
-            const pdf=await pdfjsLib.getDocument({data:ta}).promise;
-            const page=await pdf.getPage(1),vp=page.getViewport({scale:1.5});
-            const bg=document.getElementById('pdfBgCanvas'),dc=document.getElementById('pdfDrawCanvas');
-            pdfWidth=vp.width;pdfHeight=vp.height;
-            bg.width=dc.width=vp.width;bg.height=dc.height=vp.height;
-            bg.parentElement.style.width=vp.width+'px';bg.parentElement.style.height=vp.height+'px';
-            await page.render({canvasContext:bg.getContext('2d'),viewport:vp}).promise;
-            dc.getContext('2d').clearRect(0,0,dc.width,dc.height);
+            editorDoc=await pdfjsLib.getDocument({data:ta}).promise;
+            editorPageCount=editorDoc.numPages;
+            editorAnnot=new Array(editorPageCount).fill(null);
+            editorCurrentPage=-1;
             undoStack=[];redoStack=[];updateUndoRedoUI();tbCancel();
+
+            // Affiche l'interface, masque le cadre d'import
             document.getElementById('editorToolbar').classList.remove('opacity-40','pointer-events-none');
             document.getElementById('btn-export-pdf').classList.remove('opacity-40','pointer-events-none');
-            // Affiche l'interface (barre d'outils + canvas), masque le cadre d'import
             document.getElementById('editorToolbarBar').classList.remove('hidden');
             document.getElementById('editorToolbarBar').classList.add('flex');
             document.getElementById('editorEmpty').classList.add('hidden');
             document.getElementById('editorCanvasWrap').classList.remove('hidden');
-            currentZoom=1;translateX=0;translateY=0;
-            document.getElementById('zoomWrapper').style.transform='translate(0px,0px) scale(1)';
-            setEditorStatus('PDF prêt','success');
+
+            // Événements de dessin / pan-zoom : attachés une seule fois
+            if(!editorEventsBound){
+                const dc=document.getElementById('pdfDrawCanvas');
+                initDrawingEvents(dc,dc.getContext('2d'));
+                initPanZoomEvents();
+                editorEventsBound=true;
+            }
             selectTool('brush');
-            initDrawingEvents(dc,dc.getContext('2d'));
-            initPanZoomEvents();
+            await editorRenderFilmstrip();
+            await editorShowPage(0);
         }catch(err){console.error(err);setEditorStatus('Erreur de lecture.','error');}
     };reader.readAsArrayBuffer(file);
+}
+
+// Charge une image (dataURL) et la dessine sur un contexte — renvoie une promesse
+function editorDrawDataUrl(ctx,dataUrl){
+    return new Promise(res=>{const im=new Image();im.onload=()=>{ctx.drawImage(im,0,0);res();};im.onerror=()=>res();im.src=dataUrl;});
+}
+
+// Sauvegarde les annotations de la page courante dans editorAnnot
+function editorBakeCurrent(){
+    if(editorCurrentPage<0)return;
+    if(tbRect)tbBakeToCanvas(); // grave un éventuel cadre texte non validé
+    const dc=document.getElementById('pdfDrawCanvas');
+    // ne stocke que s'il y a réellement des pixels dessinés
+    const px=dc.getContext('2d').getImageData(0,0,dc.width,dc.height).data;
+    let has=false;for(let i=3;i<px.length;i+=4){if(px[i]!==0){has=true;break;}}
+    editorAnnot[editorCurrentPage]=has?dc.toDataURL('image/png'):null;
+    const th=document.querySelectorAll('#editorFilmstrip .ed-thumb')[editorCurrentPage];
+    if(th)th.classList.toggle('annotated',has);
+}
+
+// Affiche une page donnée (fond + annotations), historique réinitialisé pour la page
+async function editorShowPage(i){
+    if(!editorDoc||i<0||i>=editorPageCount)return;
+    if(editorCurrentPage>=0&&editorCurrentPage!==i)editorBakeCurrent();
+    editorCurrentPage=i;
+    const page=await editorDoc.getPage(i+1);
+    const vp=page.getViewport({scale:EDITOR_SCALE});
+    pdfWidth=vp.width;pdfHeight=vp.height;
+    const bg=document.getElementById('pdfBgCanvas'),dc=document.getElementById('pdfDrawCanvas');
+    bg.width=dc.width=vp.width;bg.height=dc.height=vp.height;
+    bg.parentElement.style.width=vp.width+'px';bg.parentElement.style.height=vp.height+'px';
+    await page.render({canvasContext:bg.getContext('2d'),viewport:vp}).promise;
+    const dctx=dc.getContext('2d');dctx.clearRect(0,0,dc.width,dc.height);
+    if(editorAnnot[i])await editorDrawDataUrl(dctx,editorAnnot[i]);
+    undoStack=[];redoStack=[];updateUndoRedoUI();tbCancel();
+    // recentre / réinitialise le zoom
+    currentZoom=1;translateX=0;translateY=0;
+    document.getElementById('zoomWrapper').style.transform='translate(0px,0px) scale(1)';
+    // surbrillance de la vignette active + centrage horizontal dans la pellicule
+    const strip=document.getElementById('editorFilmstrip');
+    const thumbs=strip.querySelectorAll('.ed-thumb');
+    thumbs.forEach((t,idx)=>t.classList.toggle('active',idx===i));
+    const act=thumbs[i];
+    if(act)strip.scrollTo({left:act.offsetLeft-strip.clientWidth/2+act.clientWidth/2,behavior:'smooth'});
+    setEditorStatus(`Page ${i+1} / ${editorPageCount}`,'success');
+}
+
+// Construit la pellicule de vignettes
+async function editorRenderFilmstrip(){
+    const strip=document.getElementById('editorFilmstrip');strip.innerHTML='';
+    for(let i=0;i<editorPageCount;i++){
+        const page=await editorDoc.getPage(i+1);
+        const vp=page.getViewport({scale:0.22});
+        const c=document.createElement('canvas');c.width=Math.max(1,Math.round(vp.width));c.height=Math.max(1,Math.round(vp.height));
+        const cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,c.width,c.height);
+        await page.render({canvasContext:cx,viewport:vp}).promise;
+        const thumb=document.createElement('div');thumb.className='ed-thumb';
+        thumb.innerHTML=`<div class="ed-annot-dot"></div><img src="${c.toDataURL('image/jpeg',0.6)}"><span>${i+1}</span>`;
+        thumb.onclick=()=>editorShowPage(i);
+        strip.appendChild(thumb);
+    }
 }
 
 // ── Dessin (crayon / ligne / gomme / cadre texte) ──
@@ -1228,21 +1307,31 @@ function initPanZoomEvents(){
     window.addEventListener('mouseup',e=>{if(e.button===1&&isPanning){isPanning=false;cont.style.cursor='';dc.style.pointerEvents='auto';}});
 }
 
-// ── Export ──
+// ── Export (toutes les pages) ──
 async function exportEditedPdf(){
-    if(!pdfWidth)return setEditorStatus('Aucun PDF chargé','error');
-    if(tbRect)tbBakeToCanvas(); // graver si cadre non validé
+    if(!editorDoc)return setEditorStatus('Aucun PDF chargé','error');
+    editorBakeCurrent(); // fige les annotations de la page affichée
     setEditorStatus('Export…','pending');
-    const mc=document.createElement('canvas').getContext('2d');
-    mc.canvas.width=pdfWidth;mc.canvas.height=pdfHeight;
-    mc.fillStyle='#fff';mc.fillRect(0,0,pdfWidth,pdfHeight);
-    mc.drawImage(document.getElementById('pdfBgCanvas'),0,0);
-    mc.drawImage(document.getElementById('pdfDrawCanvas'),0,0);
-    const{jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:pdfWidth>pdfHeight?'l':'p',unit:'px',format:[pdfWidth,pdfHeight]});
-    doc.addImage(mc.canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pdfWidth,pdfHeight);
-    doc.save(`${editorOriginalFileName}_modifié.pdf`);
-    setEditorStatus('PDF exporté ✓','success');
+    try{
+        const{jsPDF}=window.jspdf;
+        let doc=null;
+        const mc=document.createElement('canvas'),mx=mc.getContext('2d');
+        for(let i=0;i<editorPageCount;i++){
+            const page=await editorDoc.getPage(i+1);
+            const vp=page.getViewport({scale:EDITOR_SCALE});
+            const w=Math.round(vp.width),h=Math.round(vp.height);
+            mc.width=w;mc.height=h;
+            mx.fillStyle='#fff';mx.fillRect(0,0,w,h);
+            await page.render({canvasContext:mx,viewport:vp}).promise;
+            if(editorAnnot[i])await editorDrawDataUrl(mx,editorAnnot[i]);
+            if(i===0){doc=new jsPDF({orientation:w>h?'l':'p',unit:'px',format:[w,h]});}
+            else{doc.addPage([w,h],w>h?'l':'p');}
+            doc.addImage(mc.toDataURL('image/jpeg',0.92),'JPEG',0,0,w,h);
+            setEditorStatus(`Export ${i+1}/${editorPageCount}…`,'pending');
+        }
+        doc.save(`${editorOriginalFileName}_modifié.pdf`);
+        setEditorStatus(`PDF exporté — ${editorPageCount} page(s) ✓`,'success');
+    }catch(err){console.error(err);setEditorStatus("Erreur d'export.",'error');}
 }
 
 // Init couleur + align par défaut
